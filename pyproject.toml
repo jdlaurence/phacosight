@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cataract-video"
+version = "0.1.0"
+description = "Cataract surgery video analysis: segmentation, phase recognition, irregularity detection, and resident feedback reports (built on Cataract-1K)"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas",
+    "pillow",
+    "pyyaml",
+    "scipy",
+    "torch>=2.2",
+    "torchvision",
+    "albumentations>=1.4",
+    "transformers>=4.44",
+    "matplotlib",
+    "jinja2",
+]
+
+[project.optional-dependencies]
+gpu = ["torchcodec"]          # NVDEC decode path (A40 machine)
+data = ["synapseclient>=4.0"] # dataset download
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

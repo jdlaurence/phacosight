@@ -1,0 +1,160 @@
+#!/usr/bin/env python
+"""Segmentation bake-off training: one (model, task, fold) run per invocation.
+
+Usage:
+    python scripts/train_seg.py --config configs/seg_segformer_b2.yaml --fold 0
+    python scripts/train_seg.py --config ... --fold all   # sequential 5-fold
+
+Writes per-fold checkpoints and a metrics JSON under runs/<run-name>/fold<k>/.
+"""
+
+import argparse
+import json
+import time
+from pathlib import Path
+
+import torch
+import yaml
+from torch.utils.data import DataLoader, WeightedRandomSampler
+
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from cataract_video.data.folds import load_fold
+from cataract_video.data.seg_dataset import (
+    CataractSegDataset,
+    eval_transforms,
+    instrument_oversample_weights,
+    train_transforms,
+)
+from cataract_video.labels import TASKS, PUPIL_CLASS_NAME
+from cataract_video.losses import CrossEntropyLogDice
+from cataract_video.metrics import SegMetrics
+from cataract_video.models.segmentation import build_model
+
+
+def pick_device() -> torch.device:
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def run_fold(cfg: dict, fold: int) -> dict:
+    task = TASKS[cfg["task"]]
+    device = pick_device()
+    amp = device.type == "cuda"
+
+    split_dir = Path(cfg["fold_csv_dir"])
+    prefix = cfg["fold_csv_prefix"]  # e.g. "Cat1k_anatomy_instrument"
+    train_df = load_fold(
+        split_dir / f"{prefix}_{fold}_train.csv",
+        cfg["data_root"], mask_dir=task.mask_dir, require_exists=True,
+    )
+    test_df = load_fold(
+        split_dir / f"{prefix}_{fold}_test.csv",
+        cfg["data_root"], mask_dir=task.mask_dir, require_exists=True,
+    )
+
+    size = cfg.get("image_size", 512)
+    train_ds = CataractSegDataset(train_df, train_transforms(size))
+    test_ds = CataractSegDataset(test_df, eval_transforms(size))
+
+    sampler = None
+    if cfg.get("oversample_rare_instruments", True):
+        weights = instrument_oversample_weights(train_df)
+        sampler = WeightedRandomSampler(weights, num_samples=len(train_ds))
+
+    train_loader = DataLoader(
+        train_ds, batch_size=cfg.get("batch_size", 8), sampler=sampler,
+        shuffle=sampler is None, num_workers=cfg.get("num_workers", 4),
+        pin_memory=amp, drop_last=True,
+    )
+    test_loader = DataLoader(
+        test_ds, batch_size=cfg.get("batch_size", 8),
+        num_workers=cfg.get("num_workers", 4), pin_memory=amp,
+    )
+
+    model = build_model(cfg["model"], task.num_classes).to(device)
+    criterion = CrossEntropyLogDice(task.num_classes, dice_weight=cfg.get("dice_weight", 0.8))
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=cfg.get("lr", 6e-5), weight_decay=cfg.get("weight_decay", 0.01)
+    )
+    epochs = cfg.get("epochs", 40)
+    scheduler = torch.optim.lr_scheduler.PolynomialLR(
+        optimizer, total_iters=epochs * len(train_loader), power=1.0
+    )
+    scaler = torch.amp.GradScaler(enabled=amp)
+
+    out_dir = Path(cfg.get("out_dir", "runs")) / cfg["run_name"] / f"fold{fold}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    best = {"miou": -1.0}
+    for epoch in range(epochs):
+        model.train()
+        t0 = time.time()
+        total_loss = 0.0
+        for batch in train_loader:
+            pixel_values = batch["pixel_values"].to(device, non_blocking=True)
+            labels = batch["labels"].to(device, non_blocking=True)
+            optimizer.zero_grad(set_to_none=True)
+            with torch.autocast(device_type=device.type, enabled=amp):
+                logits = model(pixel_values)
+                loss = criterion(logits, labels)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            scheduler.step()
+            total_loss += loss.item()
+
+        metrics = evaluate(model, test_loader, task, device, amp)
+        metrics["epoch"] = epoch
+        metrics["train_loss"] = total_loss / max(1, len(train_loader))
+        metrics["epoch_seconds"] = time.time() - t0
+        print(
+            f"[fold {fold}] epoch {epoch}: loss {metrics['train_loss']:.4f} "
+            f"mIoU {metrics['miou']:.4f} "
+            f"pupil IoU {metrics['per_class_iou'].get(PUPIL_CLASS_NAME, float('nan')):.4f}"
+        )
+        if metrics["miou"] > best["miou"]:
+            best = metrics
+            torch.save(
+                {"model": model.state_dict(), "config": cfg, "fold": fold, "metrics": metrics},
+                out_dir / "best.pt",
+            )
+        (out_dir / "metrics.json").write_text(json.dumps({"best": best, "last": metrics}, indent=2))
+    return best
+
+
+@torch.no_grad()
+def evaluate(model, loader, task, device, amp: bool) -> dict:
+    model.eval()
+    metrics = SegMetrics(task.num_classes, task.class_names)
+    for batch in loader:
+        pixel_values = batch["pixel_values"].to(device, non_blocking=True)
+        with torch.autocast(device_type=device.type, enabled=amp):
+            logits = model(pixel_values)
+        metrics.update(logits.argmax(dim=1), batch["labels"])
+    return metrics.compute()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--fold", default="0", help="fold index or 'all'")
+    args = parser.parse_args()
+    cfg = yaml.safe_load(Path(args.config).read_text())
+
+    folds = range(cfg.get("num_folds", 5)) if args.fold == "all" else [int(args.fold)]
+    results = {}
+    for fold in folds:
+        results[fold] = run_fold(cfg, fold)
+    if len(results) > 1:
+        mious = [r["miou"] for r in results.values()]
+        print(f"\n5-fold mIoU: mean {sum(mious)/len(mious):.4f}, per-fold {mious}")
+
+
+if __name__ == "__main__":
+    main()
