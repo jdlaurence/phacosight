@@ -1,0 +1,17 @@
+# Stage 2 E1: MS-TCN++ on frozen DINOv2-registers-L features (518x392 @ 5 fps)
+run_name: phase_mstcnpp_tools
+head: mstcnpp
+features: data/features/phase_dinov2l
+split_dir: TrainIDs_PhaseRecognition
+num_folds: 4
+
+epochs: 60
+lr: 5.0e-4
+weight_decay: 1.0e-4
+tmse_weight: 0.15
+class_weighted: true
+select_on: macro_f1
+seed: 0
+out_dir: runs
+extra_features:
+  - data/features/phase_tools

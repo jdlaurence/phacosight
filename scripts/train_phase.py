@@ -30,7 +30,8 @@ def load_split(split_dir: Path, fold: int, name: str) -> list[str]:
     return pd.read_csv(split_dir / f"fold{fold}_{name}.csv")["case"].tolist()
 
 
-def load_features(feat_dir: Path, cases: list[str], extra_dirs: list[Path]) -> dict:
+def load_features(feat_dir: Path, cases: list[str], extra_dirs: list[Path],
+                  stride: int = 1) -> dict:
     out = {}
     for c in cases:
         d = np.load(feat_dir / f"{c}.npz")
@@ -39,7 +40,7 @@ def load_features(feat_dir: Path, cases: list[str], extra_dirs: list[Path]) -> d
             x = np.load(e / f"{c}.npz")["features"].astype(np.float32)
             assert len(x) == len(feats[0]), f"{c}: extra feature length mismatch"
             feats.append(x)
-        out[c] = (np.concatenate(feats, axis=1), d["labels"].astype(np.int64))
+        out[c] = (np.concatenate(feats, axis=1)[::stride], d["labels"].astype(np.int64)[::stride])
     return out
 
 
@@ -68,7 +69,9 @@ def run_fold(cfg: dict, fold: int) -> dict:
     feat_dir = Path(cfg["features"])
     extra = [Path(p) for p in cfg.get("extra_features", [])]
     splits = {s: load_split(split_dir, fold, s) for s in ("train", "val", "test")}
-    data = load_features(feat_dir, sum(splits.values(), []), extra)
+    data = load_features(feat_dir, sum(splits.values(), []), extra,
+                         stride=cfg.get("frame_stride", 1))
+    eff_fps = cfg.get("features_fps", 5.0) / cfg.get("frame_stride", 1)
 
     in_dim = next(iter(data.values()))[0].shape[1]
     model = HEADS[cfg["head"]](in_dim, NUM_CLASSES, **cfg.get("head_kwargs", {})).to(device)
@@ -103,7 +106,7 @@ def run_fold(cfg: dict, fold: int) -> dict:
             total += loss.item()
         sched.step()
 
-        val = evaluate(model, data, splits["val"], device)
+        val = evaluate(model, data, splits["val"], device, fps=eff_fps)
         row = {"epoch": epoch, "train_loss": total / len(order),
                "val": val, "seconds": time.time() - t0}
         history.append(row)
@@ -117,9 +120,9 @@ def run_fold(cfg: dict, fold: int) -> dict:
     torch.save({"model": model.state_dict(), "config": cfg, "fold": fold,
                 "epoch": epochs - 1}, out_dir / "last.pt")
     # test: once, with the val-selected model (and last for reference)
-    test_last = evaluate(model, data, splits["test"], device)
+    test_last = evaluate(model, data, splits["test"], device, fps=eff_fps)
     model.load_state_dict(torch.load(out_dir / "val_best.pt", weights_only=False)["model"])
-    test_val_best = evaluate(model, data, splits["test"], device)
+    test_val_best = evaluate(model, data, splits["test"], device, fps=eff_fps)
 
     result = {"fold": fold, "val_best_epoch": best["epoch"], "val_best": best["val"],
               "test_val_best": test_val_best, "test_last": test_last,
