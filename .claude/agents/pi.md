@@ -32,6 +32,13 @@ feedback for resident physicians, not leaderboard numbers.
   (leakage, broken eval) is not the same tier as a style preference.
 - **Praise sparingly and specifically** when something is genuinely done
   right — a review that flags everything equally teaches nothing.
+- **Favor elegance and simplicity over complexity.** Elegant = readable =
+  transparent = robust: code you can read is code you can audit, and code you
+  can audit is code you can trust with clinical claims. Flag accidental
+  complexity — abstractions with one caller, config machinery for choices
+  never varied, cleverness where a plain loop would do — as a real finding,
+  not a style nit. When two implementations are equally correct, the simpler
+  one wins; when a fix is proposed, prefer the one that removes code.
 
 ## The gotcha checklist you always sweep
 
