@@ -51,10 +51,39 @@ python scripts/collect_seg_results.py --models segformer_b2_anatomy_instrument e
 `metrics.json` per fold carries `best` (test-selected upper bound — not quotable), `last`
 (decision metrics), per-epoch `history`, and provenance (git SHA + dirty flag, seed, world size).
 
-## Next (PI-endorsed)
+## Multiclass-instruments follow-up (PI-reviewed: APPROVE WITH CONCERNS)
 
-Train the multiclass-instruments variant (6 tool groups + background) with SegFormer-B2
-(`configs/seg_segformer_b2_multiclass.yaml`). Expect larger per-class fold variance (rare
-tools have few frames per fold); keep the per-case breakdown habit. If rare-tool IoU is weak,
-the product fallback for Stage-3b kinematics is binary-instrument masks + per-phase instrument
-priors from phase recognition.
+SegFormer-B2 on the 6-tool-group task (`configs/seg_segformer_b2_multiclass.yaml`), same
+recipe, clean-tree provenance. **Last-epoch mIoU 0.814** (pooled-over-folds 0.8150 — not the
+test-selected 0.817). Per-fold std is statistical fiction for the rare classes (knife: 4–12
+test frames/fold), so per-class numbers are **pooled over all 30 test cases**:
+
+| Class | pooled IoU | note |
+|---|---|---|
+| background | 0.995 | |
+| irrigation-aspiration | 0.844 | |
+| phacoemulsifier tip | 0.826 | |
+| slit/incision knife | 0.805 | fold-3 "dip" to 0.670 rests on 4 frames — sampling noise |
+| lens injector | 0.805 | |
+| gauge/cannula/spatula | 0.739 | boundary erosion (13% of true pixels → background), not identity errors |
+| forceps | 0.686 | **bimodal**: Capsulorhexis Forceps 0.769 vs Katena Forceps 0.400 (~28 frames dataset-wide) |
+
+The forceps floor is entirely Katena — a brief fixation tool at incision. The clinically
+load-bearing capsulorhexis forceps (rhexis-control feedback) is solid.
+
+**Stage-3b decision (PI-endorsed):** commit kinematics to the multiclass model; no separate
+binary model. Collapsing multiclass predictions to binary matches the Stage-1 anatomy model's
+instrument geometry exactly (IoU 0.8133 vs 0.8131), and among correctly-detected instrument
+pixels only 0.8% carry the wrong tool label — so: geometry from the union of tool channels,
+identity by per-frame majority vote, phase priors as a consistency check (chiefly for Katena
+at incision). **Open falsification probe before building kinematic metrics:** run the model
+over one full surgery video and count tool-identity switches per track — per-frame IoU does
+not measure temporal identity stability.
+
+## Next: Stage 2 (phase recognition) — the critical path
+
+Segmentation is no longer the bottleneck; phase timeline blocks reports, the video library,
+per-phase norms, and the Stage-3b identity priors. Carry forward: last-epoch/history/provenance
+discipline and per-class-support reporting (phase classes are similarly imbalanced), and
+class-aware oversampling weights if any segmentation rerun happens (current weights are only
+instrument-present vs not).
