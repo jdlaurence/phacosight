@@ -15,6 +15,10 @@ This repo started as the Cataract-1K dataset-release repo (see below) and is bei
 
 The Cataract-1K dataset (described below) is the training/evaluation data for this work: its phase-annotation CSVs support the timing/recognition components, its pixel-level annotations support segmentation, and its irregularity subsets support event detection. New model training, inference, and report-generation code should build on the existing preprocessing scripts and committed cross-validation splits rather than reinventing them — in particular, reuse the class-ID conventions and patient-wise fold splits documented below so results remain comparable to the paper's benchmarks.
 
+## PI review (required step)
+
+`.claude/agents/pi.md` defines a Principal Investigator reviewer agent (expert ML practitioner + ophthalmic-surgery domain expert). **Invoke the `pi` agent to review the pipeline and results whenever new experimental results are in** — end of a training run or bake-off stage, new evaluation numbers, dataset changes — and before acting on any experiment-derived decision (picking a winner model, changing the recipe, promoting to the next stage). Address its blocking findings before relying on the results.
+
 ## Development (new model code)
 
 The experimentation plan (architectures, performance budget, experiment roadmap) lives at `docs/experimentation-plan.md`. New code lives in `src/cataract_video/` (src layout), configs in `configs/`, entry points in `scripts/`.
