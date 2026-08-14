@@ -25,25 +25,29 @@ from cataract_video.phase.metrics import PhaseMetrics, edit_score, segments
 from cataract_video.phase.timeline import NUM_CLASSES, PHASES
 
 
-def load_case(feat_dir: Path, case: str):
+def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = ()):
     d = np.load(feat_dir / f"{case}.npz")
-    return d["features"].astype(np.float32), d["labels"].astype(np.int64)
+    feats = [d["features"].astype(np.float32)]
+    for e in extra_dirs:
+        feats.append(np.load(Path(e) / f"{case}.npz")["features"].astype(np.float32))
+    return np.concatenate(feats, axis=1), d["labels"].astype(np.int64)
 
 
 @torch.no_grad()
 def fold_logits(run_dir: Path, fold: int, feat_dir: Path, split_dir: Path, device):
     ckpt = torch.load(run_dir / f"fold{fold}" / "val_best.pt", weights_only=False)
     cfg = ckpt["config"]
+    extra_dirs = [Path(p) for p in cfg.get("extra_features", [])]
     cases = {s: pd.read_csv(split_dir / f"fold{fold}_{s}.csv")["case"].tolist()
              for s in ("train", "test")}
-    sample_x, _ = load_case(feat_dir, cases["test"][0])
+    sample_x, _ = load_case(feat_dir, cases["test"][0], extra_dirs)
     model = HEADS[cfg["head"]](sample_x.shape[1], NUM_CLASSES,
                                **cfg.get("head_kwargs", {})).to(device)
     model.load_state_dict(ckpt["model"])
     model.eval()
     out = {}
     for c in cases["test"]:
-        x, y = load_case(feat_dir, c)
+        x, y = load_case(feat_dir, c, extra_dirs)
         logits = model(torch.from_numpy(x).unsqueeze(0).to(device))[-1, 0]
         out[c] = (torch.log_softmax(logits, -1).cpu().numpy(), y)
     train_labels = [load_case(feat_dir, c)[1] for c in cases["train"]]
