@@ -14,6 +14,7 @@ Writes per-fold checkpoints and a metrics JSON under runs/<run-name>/fold<k>/.
 import argparse
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -127,6 +128,7 @@ def run_fold(cfg: dict, fold: int, rank: int = 0, world: int = 1) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     best = {"miou": -1.0}
+    history = []  # full per-epoch record; winner decisions use last epochs, never "best" (test-selected)
     for epoch in range(epochs):
         if isinstance(sampler, DistributedSampler):
             sampler.set_epoch(epoch)
@@ -164,9 +166,14 @@ def run_fold(cfg: dict, fold: int, rank: int = 0, world: int = 1) -> dict:
                     {"model": state.state_dict(), "config": cfg, "fold": fold, "metrics": metrics},
                     out_dir / "best.pt",
                 )
+        history.append(metrics)
         if main:
             (out_dir / "metrics.json").write_text(
-                json.dumps({"best": best, "last": metrics}, indent=2)
+                json.dumps(
+                    {"best": best, "last": metrics, "history": history,
+                     "provenance": cfg.get("_provenance", {})},
+                    indent=2,
+                )
             )
     if world > 1:
         dist.barrier()
@@ -198,7 +205,16 @@ def main() -> None:
     cfg = yaml.safe_load(Path(args.config).read_text())
 
     rank, world = ddp_setup()
-    torch.manual_seed(cfg.get("seed", 0) + rank)  # decorrelates per-rank sampling
+    seed = cfg.get("seed", 0)
+    torch.manual_seed(seed + rank)  # decorrelates per-rank sampling
+    try:
+        sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+            cwd=Path(__file__).resolve().parents[1],
+        ).stdout.strip()
+    except OSError:
+        sha = "unknown"
+    cfg["_provenance"] = {"git_sha": sha, "seed": seed, "world_size": world}
 
     folds = range(cfg.get("num_folds", 5)) if args.fold == "all" else [int(args.fold)]
     results = {}
