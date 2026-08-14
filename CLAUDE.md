@@ -19,10 +19,10 @@ The Cataract-1K dataset (described below) is the training/evaluation data for th
 
 The experimentation plan (architectures, performance budget, experiment roadmap) lives at `docs/experimentation-plan.md`. New code lives in `src/cataract_video/` (src layout), configs in `configs/`, entry points in `scripts/`.
 
-- Environment: `.venv` (Python 3.11, CPU torch locally — GPU experiments run on an A40 machine).
+- Environment: `.venv` (on the cluster: Python 3.12, torch+cu130, 2× A40 GPUs).
 - Tests: `.venv/bin/python -m pytest tests/ -q` — includes CPU smoke tests with synthetic data; no dataset download needed.
-- Train segmentation: `.venv/bin/python scripts/train_seg.py --config configs/seg_segformer_b2.yaml --fold 0` (or `--fold all`).
-- Download data (needs Synapse account + `SYNAPSE_AUTH_TOKEN`): `python scripts/download_data.py --sets segmentation phase` → `data/`.
+- Train segmentation on both GPUs (preferred): `.venv/bin/torchrun --standalone --nproc_per_node=2 scripts/train_seg.py --config configs/seg_segformer_b2.yaml --fold 0` (or `--fold all`). Plain `.venv/bin/python scripts/train_seg.py ...` still works single-GPU/CPU.
+- Download data (needs Synapse account + `SYNAPSE_AUTH_TOKEN`): `python scripts/download_data.py --sets segmentation phase` → `data/`. On the cluster, `data/` is a symlink to `/mnt/data/projects/jd_exp/cataract` — datasets live on that mount, not in the home folder.
 - Class-ID conventions are codified in `src/cataract_video/labels.py` — they mirror the upstream mask scripts exactly (note: multiclass instruments = 10 tools grouped into 6 classes).
 - `src/cataract_video/data/folds.py` remaps the committed fold CSVs' cluster/relative paths to a local data root; `data_root` in configs points at the local `Images_and_Supervisely_Annotations` directory.
 - EfficientViT and PIDNet candidates need extra setup (pip git install / vendoring into `third_party/`) — see `src/cataract_video/models/segmentation.py` docstring.
