@@ -81,6 +81,12 @@ def _build_efficientvit(variant: str, num_classes: int) -> nn.Module:
 
 
 def _build_pidnet(variant: str, num_classes: int) -> nn.Module:
+    import sys
+    from pathlib import Path
+
+    repo_root = str(Path(__file__).resolve().parents[3])  # third_party/ lives here
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
     try:
         from third_party.pidnet.pidnet import get_pred_model
     except ImportError as e:
