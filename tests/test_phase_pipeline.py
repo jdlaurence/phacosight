@@ -71,3 +71,23 @@ def test_heads_shapes_and_loss(name):
     loss = mstcn_loss(out, target)
     loss.backward()
     assert torch.isfinite(loss)
+
+
+def test_decoding_smooth_and_viterbi():
+    from cataract_video.phase.decoding import mode_smooth, transition_matrix, viterbi
+
+    noisy = np.array([1, 1, 2, 1, 1, 0, 0, 0, 3, 0, 0])
+    sm = mode_smooth(noisy, window=3)
+    assert sm[2] == 1 and sm[8] == 0  # isolated flickers removed
+
+    # grammar learned from sticky sequences keeps Viterbi from flickering
+    train = [np.array([0] * 20 + [1] * 20 + [2] * 20)]
+    log_trans = transition_matrix(train, 3)
+    probs = np.full((30, 3), 0.1)
+    probs[:10, 0] = 0.8
+    probs[10:, 1] = 0.8
+    probs[15, 2] = 0.9  # single-frame spurious spike
+    probs[15, 1] = 0.05
+    path = viterbi(np.log(probs), log_trans)
+    assert path[15] == 1  # spike suppressed by sticky grammar
+    assert (path[:10] == 0).all() and (path[10:] == 1).all()

@@ -103,4 +103,15 @@ def mstcn_loss(stage_logits: torch.Tensor, target: torch.Tensor,
     return loss
 
 
-HEADS = {"mstcnpp": MSTCNPP, "bigru": BiGRU}
+class LinearProbe(nn.Module):
+    """Per-frame linear classifier — the E0 sanity floor (no temporal context)."""
+
+    def __init__(self, in_dim: int, num_classes: int):
+        super().__init__()
+        self.out = nn.Linear(in_dim, num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.out(x).unsqueeze(0)
+
+
+HEADS = {"mstcnpp": MSTCNPP, "bigru": BiGRU, "linear": LinearProbe}
