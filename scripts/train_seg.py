@@ -167,6 +167,14 @@ def run_fold(cfg: dict, fold: int, rank: int = 0, world: int = 1) -> dict:
                     out_dir / "best.pt",
                 )
         history.append(metrics)
+        if main and epoch == epochs - 1:
+            # the decision/deployment artifact (PI N1): unlike best.pt, carries
+            # no test-selection bias
+            state = model.module if isinstance(model, DistributedDataParallel) else model
+            torch.save(
+                {"model": state.state_dict(), "config": cfg, "fold": fold, "metrics": metrics},
+                out_dir / "last.pt",
+            )
         if main:
             (out_dir / "metrics.json").write_text(
                 json.dumps(
@@ -207,14 +215,17 @@ def main() -> None:
     rank, world = ddp_setup()
     seed = cfg.get("seed", 0)
     torch.manual_seed(seed + rank)  # decorrelates per-rank sampling
+    repo = Path(__file__).resolve().parents[1]
     try:
         sha = subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
-            cwd=Path(__file__).resolve().parents[1],
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=repo,
         ).stdout.strip()
+        dirty = bool(subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True, cwd=repo,
+        ).stdout.strip())
     except OSError:
-        sha = "unknown"
-    cfg["_provenance"] = {"git_sha": sha, "seed": seed, "world_size": world}
+        sha, dirty = "unknown", True
+    cfg["_provenance"] = {"git_sha": sha, "git_dirty": dirty, "seed": seed, "world_size": world}
 
     folds = range(cfg.get("num_folds", 5)) if args.fold == "all" else [int(args.fold)]
     results = {}
