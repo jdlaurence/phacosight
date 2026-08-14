@@ -30,12 +30,14 @@ segments per video).
 | E0 linear probe (no temporal context, fold 0) | 0.645 | 11 |
 | BiGRU on frozen DINOv2-reg-L | 0.925 | 87.5 |
 | MS-TCN++ on frozen DINOv2-reg-L | 0.940 | 92.1 |
-| **+ tool-presence fusion (E3)** | **0.953** | **94.1** |
-| + 3-seed ensemble + temperature (confidence stack) | ~0.955–0.96 (single-seed base: 0.948) | 92.8 |
+| **+ tool-presence fusion (E3)** | **0.952** | **94.1** |
+| **+ 3-seed ensemble + temperature (deployment stack)** | **0.954** (acc 0.960) | 93.8 |
 
 - **Tool fusion** (36-dim per-frame presence features from the Stage-1 segmentation models,
-  leakage-clean per the committed checkpoint map): honest seed-mean gain **+1.31 pp**
-  macro-F1; beats base on all folds and 24/33 non-tied videos (Wilcoxon p=2.9e-4, n=56).
+  leakage-clean per the committed checkpoint map): honest seed-mean gain **+1.20 pp**
+  macro-F1 (official seeds 0.9489/0.9524/0.9555 vs base 0.9349/0.9405/0.9455 — every
+  tools seed beats every base seed); beats base on all folds and 24/33 non-tied videos
+  (Wilcoxon p=2.9e-4, n=56).
   Attribution: **Hydrodissection +9.3 pp** (the hydro-cannula signal fixes the visually
   weakest phase) plus training stabilization (base runs' catastrophic hydro folds vanish).
   It is *not* ensembling in disguise — single fused model beats the base 3-seed ensemble.
@@ -46,10 +48,11 @@ segments per video).
   are the norm — a hand-authored left-to-right grammar would be wrong). Segment ratio
   1.04 → 0.99, edit +2.
 - **Confidence** (within-fold 3-seed ensembles — cross-fold models saw the video — with
-  temperature fit on val): frame ECE 0.011 → **0.008** (T ≈ 1.0); top-10%-disagreement
-  frames carry **4.3×** the average error; dropping the lowest-confidence 5% of segments
-  lifts segment purity(≥0.5) from 96.7% → 98.4%. Frame confidence is the probability of the
-  Viterbi-decoded label (conservative where decoding overrides frames), not an HMM posterior.
+  temperature fit on val). Deployment stack (fusion ensemble): frame ECE 0.010 → **0.008**
+  (T ≈ 1.0–1.06); top-10%-disagreement frames carry **4.5×** the average error; dropping
+  the lowest-confidence 5% of segments lifts segment purity(≥0.5) from 97.4% → **99.0%**.
+  Frame confidence is the probability of the Viterbi-decoded label (conservative where
+  decoding overrides frames), not an HMM posterior.
 
 ## Per-phase duration accuracy (fusion + Viterbi; what the report will quote)
 
