@@ -43,13 +43,19 @@ def load_fold(
     df["imgs"] = df["imgs"].map(lambda p: _relocate(p, data_root))
     df["masks"] = df["masks"].map(lambda p: _relocate(p, data_root, mask_dir=mask_dir))
     if require_exists:
-        missing = [p for col in ("imgs", "masks") for p in df[col] if not Path(p).exists()]
-        if missing:
+        ok = df["imgs"].map(Path.exists) & df["masks"].map(Path.exists)
+        if ok.sum() < len(df) / 2:
             raise FileNotFoundError(
-                f"{len(missing)} of {2 * len(df)} files from {csv_path} are missing "
-                f"under {data_root} (first: {missing[0]}). Download the dataset and/or "
-                "generate the masks with the upstream Dataset_codes scripts."
+                f"{len(df) - ok.sum()} of {len(df)} rows from {csv_path} are missing under "
+                f"{data_root} — wrong data_root, or masks not generated "
+                "(scripts/generate_masks.py)."
             )
+        if not ok.all():
+            # e.g. case5319_112.png: referenced by the instruments CSVs but
+            # absent from the Synapse release itself
+            for p in df.loc[~ok, "imgs"]:
+                print(f"load_fold: dropping row with missing file: {p}")
+            df = df[ok].reset_index(drop=True)
     return df
 
 
