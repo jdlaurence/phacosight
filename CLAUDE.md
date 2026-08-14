@@ -10,6 +10,8 @@ This repo started as the Cataract-1K dataset-release repo (see below) and is bei
 2. **Phase recognition and timing** — identify the twelve action phases plus idle periods, and extract per-phase durations and transitions.
 3. **Generated reports** summarizing the procedure (phase timeline, instrument usage, notable events/irregularities such as pupil contraction or IOL rotation).
 4. **Detailed feedback and annotated images/frames** for resident physicians reviewing their own surgeries.
+5. **Per-phase instrument-movement feedback** — kinematic metrics (path length, velocity, smoothness, decentration) for each surgical step, compared against cohort norms.
+6. **Phase-indexed video library** — analyzed videos are indexed by surgical phase so past surgeries can be searched by step (e.g. "all main incisions") and matching clips retrieved.
 
 The Cataract-1K dataset (described below) is the training/evaluation data for this work: its phase-annotation CSVs support the timing/recognition components, its pixel-level annotations support segmentation, and its irregularity subsets support event detection. New model training, inference, and report-generation code should build on the existing preprocessing scripts and committed cross-validation splits rather than reinventing them — in particular, reuse the class-ID conventions and patient-wise fold splits documented below so results remain comparable to the paper's benchmarks.
 
