@@ -2,7 +2,10 @@
 """Segmentation bake-off training: one (model, task, fold) run per invocation.
 
 Usage:
+    # single GPU / CPU
     python scripts/train_seg.py --config configs/seg_segformer_b2.yaml --fold 0
+    # both A40s via DDP (preferred on the cluster)
+    torchrun --standalone --nproc_per_node=2 scripts/train_seg.py --config ... --fold 0
     python scripts/train_seg.py --config ... --fold all   # sequential 5-fold
 
 Writes per-fold checkpoints and a metrics JSON under runs/<run-name>/fold<k>/.
@@ -10,12 +13,15 @@ Writes per-fold checkpoints and a metrics JSON under runs/<run-name>/fold<k>/.
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
 import torch
+import torch.distributed as dist
 import yaml
-from torch.utils.data import DataLoader, WeightedRandomSampler
+from torch.nn.parallel import DistributedDataParallel
+from torch.utils.data import DataLoader, DistributedSampler, WeightedRandomSampler
 
 import sys
 
@@ -34,18 +40,31 @@ from cataract_video.metrics import SegMetrics
 from cataract_video.models.segmentation import build_model
 
 
+def ddp_setup() -> tuple[int, int]:
+    """Initialize process group under torchrun; no-op otherwise. Returns (rank, world)."""
+    if "RANK" not in os.environ:
+        return 0, 1
+    if not dist.is_initialized():
+        dist.init_process_group("nccl" if torch.cuda.is_available() else "gloo")
+    local_rank = int(os.environ["LOCAL_RANK"])
+    if torch.cuda.is_available():
+        torch.cuda.set_device(local_rank)
+    return dist.get_rank(), dist.get_world_size()
+
+
 def pick_device() -> torch.device:
     if torch.cuda.is_available():
-        return torch.device("cuda")
+        return torch.device("cuda", torch.cuda.current_device())
     if torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
 
 
-def run_fold(cfg: dict, fold: int) -> dict:
+def run_fold(cfg: dict, fold: int, rank: int = 0, world: int = 1) -> dict:
     task = TASKS[cfg["task"]]
     device = pick_device()
     amp = device.type == "cuda"
+    main = rank == 0
 
     split_dir = Path(cfg["fold_csv_dir"])
     prefix = cfg["fold_csv_prefix"]  # e.g. "Cat1k_anatomy_instrument"
@@ -62,10 +81,22 @@ def run_fold(cfg: dict, fold: int) -> dict:
     train_ds = CataractSegDataset(train_df, train_transforms(size))
     test_ds = CataractSegDataset(test_df, eval_transforms(size))
 
+    # Each DDP rank evaluates a disjoint slice of the test set; the confusion
+    # matrices are all-reduced in evaluate(), so metrics stay exact (no
+    # DistributedSampler padding duplicates).
+    if world > 1:
+        test_ds = CataractSegDataset(
+            test_df.iloc[rank::world].reset_index(drop=True), eval_transforms(size)
+        )
+
     sampler = None
     if cfg.get("oversample_rare_instruments", True):
+        # With-replacement sampling is independent per rank: each rank draws its
+        # own 1/world share of an epoch (seeded differently in main()).
         weights = instrument_oversample_weights(train_df)
-        sampler = WeightedRandomSampler(weights, num_samples=len(train_ds))
+        sampler = WeightedRandomSampler(weights, num_samples=len(train_ds) // world)
+    elif world > 1:
+        sampler = DistributedSampler(train_ds, shuffle=True)
 
     train_loader = DataLoader(
         train_ds, batch_size=cfg.get("batch_size", 8), sampler=sampler,
@@ -78,6 +109,10 @@ def run_fold(cfg: dict, fold: int) -> dict:
     )
 
     model = build_model(cfg["model"], task.num_classes).to(device)
+    if world > 1:
+        model = DistributedDataParallel(
+            model, device_ids=[device.index] if device.type == "cuda" else None
+        )
     criterion = CrossEntropyLogDice(task.num_classes, dice_weight=cfg.get("dice_weight", 0.8))
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.get("lr", 6e-5), weight_decay=cfg.get("weight_decay", 0.01)
@@ -93,6 +128,8 @@ def run_fold(cfg: dict, fold: int) -> dict:
 
     best = {"miou": -1.0}
     for epoch in range(epochs):
+        if isinstance(sampler, DistributedSampler):
+            sampler.set_epoch(epoch)
         model.train()
         t0 = time.time()
         total_loss = 0.0
@@ -113,18 +150,26 @@ def run_fold(cfg: dict, fold: int) -> dict:
         metrics["epoch"] = epoch
         metrics["train_loss"] = total_loss / max(1, len(train_loader))
         metrics["epoch_seconds"] = time.time() - t0
-        print(
-            f"[fold {fold}] epoch {epoch}: loss {metrics['train_loss']:.4f} "
-            f"mIoU {metrics['miou']:.4f} "
-            f"pupil IoU {metrics['per_class_iou'].get(PUPIL_CLASS_NAME, float('nan')):.4f}"
-        )
+        if main:
+            print(
+                f"[fold {fold}] epoch {epoch}: loss {metrics['train_loss']:.4f} "
+                f"mIoU {metrics['miou']:.4f} "
+                f"pupil IoU {metrics['per_class_iou'].get(PUPIL_CLASS_NAME, float('nan')):.4f}"
+            )
         if metrics["miou"] > best["miou"]:
             best = metrics
-            torch.save(
-                {"model": model.state_dict(), "config": cfg, "fold": fold, "metrics": metrics},
-                out_dir / "best.pt",
+            if main:
+                state = model.module if isinstance(model, DistributedDataParallel) else model
+                torch.save(
+                    {"model": state.state_dict(), "config": cfg, "fold": fold, "metrics": metrics},
+                    out_dir / "best.pt",
+                )
+        if main:
+            (out_dir / "metrics.json").write_text(
+                json.dumps({"best": best, "last": metrics}, indent=2)
             )
-        (out_dir / "metrics.json").write_text(json.dumps({"best": best, "last": metrics}, indent=2))
+    if world > 1:
+        dist.barrier()
     return best
 
 
@@ -137,6 +182,11 @@ def evaluate(model, loader, task, device, amp: bool) -> dict:
         with torch.autocast(device_type=device.type, enabled=amp):
             logits = model(pixel_values)
         metrics.update(logits.argmax(dim=1), batch["labels"])
+    if dist.is_initialized():
+        # each rank saw a disjoint slice of the test set; sum the confusions
+        confusion = torch.from_numpy(metrics.confusion).to(device)
+        dist.all_reduce(confusion)
+        metrics.confusion = confusion.cpu().numpy()
     return metrics.compute()
 
 
@@ -147,13 +197,18 @@ def main() -> None:
     args = parser.parse_args()
     cfg = yaml.safe_load(Path(args.config).read_text())
 
+    rank, world = ddp_setup()
+    torch.manual_seed(cfg.get("seed", 0) + rank)  # decorrelates per-rank sampling
+
     folds = range(cfg.get("num_folds", 5)) if args.fold == "all" else [int(args.fold)]
     results = {}
     for fold in folds:
-        results[fold] = run_fold(cfg, fold)
-    if len(results) > 1:
+        results[fold] = run_fold(cfg, fold, rank=rank, world=world)
+    if len(results) > 1 and rank == 0:
         mious = [r["miou"] for r in results.values()]
         print(f"\n5-fold mIoU: mean {sum(mious)/len(mious):.4f}, per-fold {mious}")
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 
 if __name__ == "__main__":
