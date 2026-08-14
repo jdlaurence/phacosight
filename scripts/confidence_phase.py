@@ -26,25 +26,29 @@ from cataract_video.phase.metrics import PhaseMetrics, segments
 from cataract_video.phase.timeline import NUM_CLASSES, PHASES
 
 
-def load_case(feat_dir: Path, case: str):
+def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = ()):
     d = np.load(feat_dir / f"{case}.npz")
-    return d["features"].astype(np.float32), d["labels"].astype(np.int64)
+    feats = [d["features"].astype(np.float32)]
+    for e in extra_dirs:
+        feats.append(np.load(Path(e) / f"{case}.npz")["features"].astype(np.float32))
+    return np.concatenate(feats, axis=1), d["labels"].astype(np.int64)
 
 
 @torch.no_grad()
 def seed_logits(run_dirs, fold, cases, feat_dir, device):
-    """{case: [n_seeds, T, C] logits}."""
+    """{case: [n_seeds, T, C] logits}. Extra-feature spec comes from each checkpoint."""
     out = {c: [] for c in cases}
     for rd in run_dirs:
         ckpt = torch.load(Path(rd) / f"fold{fold}" / "val_best.pt", weights_only=False)
         cfg = ckpt["config"]
-        x0, _ = load_case(feat_dir, cases[0])
+        extra = [Path(p) for p in cfg.get("extra_features", [])]
+        x0, _ = load_case(feat_dir, cases[0], extra)
         model = HEADS[cfg["head"]](x0.shape[1], NUM_CLASSES,
                                    **cfg.get("head_kwargs", {})).to(device)
         model.load_state_dict(ckpt["model"])
         model.eval()
         for c in cases:
-            x, _ = load_case(feat_dir, c)
+            x, _ = load_case(feat_dir, c, extra)
             out[c].append(model(torch.from_numpy(x).unsqueeze(0).to(device))[-1, 0].cpu())
     return {c: torch.stack(v) for c, v in out.items()}
 
