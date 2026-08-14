@@ -17,7 +17,7 @@ The Cataract-1K dataset (described below) is the training/evaluation data for th
 
 ## Development (new model code)
 
-The experimentation plan (architectures, performance budget, experiment roadmap) lives at `~/.claude/plans/i-d-like-you-to-staged-muffin.md`. New code lives in `src/cataract_video/` (src layout), configs in `configs/`, entry points in `scripts/`.
+The experimentation plan (architectures, performance budget, experiment roadmap) lives at `docs/experimentation-plan.md`. New code lives in `src/cataract_video/` (src layout), configs in `configs/`, entry points in `scripts/`.
 
 - Environment: `.venv` (Python 3.11, CPU torch locally — GPU experiments run on an A40 machine).
 - Tests: `.venv/bin/python -m pytest tests/ -q` — includes CPU smoke tests with synthetic data; no dataset download needed.
