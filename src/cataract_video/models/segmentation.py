@@ -44,18 +44,40 @@ def _build_segformer(variant: str, num_classes: int) -> nn.Module:
     return _HFSegWrapper(model)
 
 
+class _UpsampleWrapper(nn.Module):
+    """For models emitting logits below input resolution (e.g. stride-8)."""
+
+    def __init__(self, model: nn.Module):
+        super().__init__()
+        self.model = model
+
+    def forward(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        logits = self.model(pixel_values)
+        return F.interpolate(
+            logits, size=pixel_values.shape[-2:], mode="bilinear", align_corners=False
+        )
+
+
 def _build_efficientvit(variant: str, num_classes: int) -> nn.Module:
     try:
-        from efficientvit.seg_model_zoo import create_efficientvit_seg_model
+        from efficientvit.models import efficientvit as ev
     except ImportError as e:
         raise ImportError(
             "EfficientViT is not installed. Run: pip install "
             "git+https://github.com/mit-han-lab/efficientvit.git"
         ) from e
-    # cityscapes-pretrained head is replaced to num_classes by the zoo API
-    return create_efficientvit_seg_model(
-        name=f"efficientvit-seg-{variant.split('_')[-1]}-cityscapes", n_classes=num_classes
-    )
+    from huggingface_hub import hf_hub_download
+
+    short = variant.split("_")[-1]  # b1, b2
+    model = getattr(ev, f"efficientvit_seg_{short}")(dataset="cityscapes")
+    ckpt = hf_hub_download("han-cai/efficientvit-seg", f"efficientvit_seg_{short}_cityscapes.pt")
+    sd = torch.load(ckpt, map_location="cpu", weights_only=False)
+    model.load_state_dict(sd.get("state_dict", sd))
+    # swap the 19-class Cityscapes classifier for ours (stride-8 logits → upsample)
+    final = model.head.output_ops[0].op_list[1]
+    old = final.conv
+    final.conv = nn.Conv2d(old.in_channels, num_classes, kernel_size=1, bias=old.bias is not None)
+    return _UpsampleWrapper(model)
 
 
 def _build_pidnet(variant: str, num_classes: int) -> nn.Module:
@@ -66,7 +88,9 @@ def _build_pidnet(variant: str, num_classes: int) -> nn.Module:
             "PIDNet source not vendored. Copy models/pidnet.py (and its imports) "
             "from https://github.com/XuJiacong/PIDNet into third_party/pidnet/."
         ) from e
-    return get_pred_model(name=variant.replace("_", "-"), num_classes=num_classes)
+    # single-head inference variant (augment=False), stride-8 logits; trains
+    # from scratch — the ImageNet init lives on the authors' Google Drive.
+    return _UpsampleWrapper(get_pred_model(name=variant.replace("_", "-"), num_classes=num_classes))
 
 
 _BUILDERS = {
