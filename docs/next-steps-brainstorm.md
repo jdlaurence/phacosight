@@ -77,3 +77,52 @@ Quick wins first (A1, A2, A6, B1 — days, mostly CPU), then the two structural 
 backbone fine-tune, A5 self-training) which interact and should be one PI-pre-registered
 experiment round, then the outward-facing work (B2 probe, B4/B5 onboarding kit) which is
 what converts "impressive in-house" into "trustworthy elsewhere."
+
+---
+
+## PI review disposition (2026-08-14, REVISE — corrections adopted)
+
+**Corrected error budget (recomputed from the full 4-fold confusion matrix; my original
+diagnosis was partly wrong):**
+- The viscoelastic↔viscoelastic-suction pair accounts for **0 frames** of confusion (fully
+  separated by temporal position, before the grammar acts). Viscoelastic's depressed F1 is
+  adjacent-boundary leakage, not the same-cannula ambiguity.
+- **73.3% of all error frames are idle-involved**; **case_4750 alone is ~20.6%** of the total
+  residual (excluding it, the other 55 videos sit at 96.7% frame accuracy).
+- Burst-phase convention errors: Tonifying↔AC-Flushing 365 fr; rhexis→hydro 179 fr.
+
+**case_4750 forensics (row 1, done same day):** genuinely atypical recording — heavily
+decentered eye, view dominated by conjunctiva/hemorrhage, instruments barely visible.
+Not a GT error; a real hard case, correctly flagged at video level (mean conf 0.78 vs
+≥0.91 all others). Note: some individual frames are confidently wrong — video-level flags
+are the trustworthy unit.
+
+**Killed/deferred:** A3 boundary refinement (0.2 s floor already below every product need);
+A4 backbone fine-tuning (targets the wrong residual, invalidates all feature caches,
+narrows the domain-general representation; revisit only if an external probe shows a
+*featural* failure); B6-entropy-minimization (reinforces confident errors under shift).
+A5 self-training reframed as **era adaptation** (pseudo-label filtering removes exactly the
+informative segments; measure with leave-one-era-out, not in-domain CV).
+
+**Added:** M-1 fusion graceful degradation (corrupt/zero tool features at eval; tool-dropout
+head training; auto-fallback to DINO-only heads — the seg models are the optics-sensitive
+component and fusion under shift could be worse than base); M-2 a "report-correct" product
+acceptance metric (per-phase totals in tolerance + anchors present/ordered + flags where
+needed) evaluated alongside macro-F1; M-3 physician adjudication of top-50 disagreement
+segments gates the whole accuracy agenda (much of the 73% idle bucket may be annotation
+convention).
+
+**Cross-clinic probe corrected:** Cataract-101 is same-clinic (Klagenfurt) — usable as a
+same-clinic/different-era probe only. **CATARACTS (Brest)** is the true external probe;
+request access early; freeze the phase mapping before looking at outputs. The zero-label
+validation kit (anchor gates, flag-rate detector, self-check) transfers without any label
+mapping.
+
+**Ranked next 1–2 weeks (product-critical first):** (1) case_4750 forensics ✓ + physician
+adjudication pack; (2) HSMM/min-duration decoding + forward–backward posterior confidence
+(one pre-registered round; targets idle MAE ~5 s→3–4 s); (3) leave-one-era-out validation +
+onboarding memo; (4) CATARACTS access request now; (5) M-1 fusion degradation test;
+(6) attention pooling + tool-edge features (mild score-chasing, <1 GPU-hr); (7) CATARACTS
+zero-label probe. Where accuracy stops mattering: in-domain frame-F1 beyond ~0.96 buys
+residents nothing — the product-visible residuals are idle timing, honest flag handling,
+and external validity.
