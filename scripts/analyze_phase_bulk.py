@@ -38,12 +38,17 @@ from cataract_video.phase.timeline import NUM_CLASSES, PHASES, phase_cases
 
 MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
-TOOLS_RUNS = ["runs/phase_mstcnpp_tools", "runs/phase_mstcnpp_tools_seed1",
-              "runs/phase_mstcnpp_tools_seed2"]
+# Heads must be trained at the inference rate: MS-TCN++ receptive fields are
+# defined in samples, so 5fps-trained heads silently collapse at 1fps (caught
+# by the labeled-video self-check below; see the 2026-08-14 incident note).
+TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_seed0", "runs/phase_mstcnpp_tools_1fps_seed1",
+              "runs/phase_mstcnpp_tools_1fps_seed2"]
 TEMPERATURE = 1.04  # mean of val-fit fold temperatures (confidence.json)
+SELF_CHECK_CASE = "case_4687"  # labeled video the stack must score >=0.85 acc on
+INFERENCE_FPS = 1.0
 
 
-def load_stack(device):
+def load_stack(device, fps=INFERENCE_FPS):
     seg = {}
     for name, (run, fname, task) in {
         "anatomy": ("runs/segformer_b2_anatomy_instrument", "best.pt", ANATOMY_INSTRUMENT),
@@ -60,10 +65,30 @@ def load_stack(device):
     for run in TOOLS_RUNS:
         for fold in range(4):
             ckpt = torch.load(Path(run) / f"fold{fold}" / "val_best.pt", weights_only=False)
+            cfg = ckpt["config"]
+            eff_fps = cfg.get("features_fps", 5.0) / cfg.get("frame_stride", 1)
+            assert eff_fps == fps, (
+                f"{run} trained at {eff_fps} fps, inference at {fps} fps — "
+                "MS-TCN++ receptive fields do not transfer across rates")
             h = HEADS["mstcnpp"](2084, NUM_CLASSES).to(device).eval()
             h.load_state_dict(ckpt["model"])
             heads.append(h)
     return dino, seg, heads
+
+
+@torch.no_grad()
+def self_check(dino, seg, heads, log_trans, device, fps: float) -> float:
+    """The stack must reproduce known accuracy on a labeled video before any
+    bulk output is written (guards rate mismatches, feature-order bugs, ...)."""
+    d = np.load(f"data/features/phase_dinov2l/{SELF_CHECK_CASE}.npz")
+    x, times, _, _ = video_features(Path("data/phase/videos") / f"{SELF_CHECK_CASE}.mp4",
+                                    dino, seg, device, fps)
+    xt = x.unsqueeze(0).to(device)
+    probs = torch.stack([torch.softmax(h(xt)[-1, 0], -1) for h in heads]).mean(0)
+    probs = torch.softmax(torch.log(probs + 1e-12) / TEMPERATURE, -1).cpu().numpy()
+    pred = viterbi(np.log(probs + 1e-12), log_trans)
+    y = d["labels"][np.clip(np.searchsorted(d["times"], times), 0, len(d["labels"]) - 1)]
+    return float((pred == y).mean())
 
 
 @torch.no_grad()
@@ -140,7 +165,11 @@ def main() -> None:
                     for c in sorted(labeled)]
     log_trans = transition_matrix(train_labels, NUM_CLASSES)
 
-    dino, seg, heads = load_stack(device)
+    dino, seg, heads = load_stack(device, args.fps)
+    acc = self_check(dino, seg, heads, log_trans, device, args.fps)
+    print(f"self-check on {SELF_CHECK_CASE}: acc {acc:.3f}")
+    if acc < 0.85:
+        raise SystemExit(f"self-check FAILED ({acc:.3f} < 0.85) — refusing to write bulk output")
     for video in videos:
         out = out_dir / f"{video.stem}.json"
         if out.exists():
