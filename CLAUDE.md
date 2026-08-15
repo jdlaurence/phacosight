@@ -64,3 +64,7 @@ Both directories have parallel subfolders for the anatomy+instruments task and t
 ## Citation/license constraints
 
 Dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md). Keep the citation and download sections of README.md intact when editing it.
+
+## Physician web app
+
+`app/` is the FastAPI + vanilla-JS tool for physicians: browse/review analyzed surgeries (interactive timeline synced to video, per-phase durations vs cohort percentiles, confidence flags), search the phase library with clip download, and upload new videos for GPU analysis (uses the validated deployment stack with its startup self-check; uploads never enter cohort norms). Run on the cluster: `.venv/bin/uvicorn app.server:app --host 0.0.0.0 --port 7860`, then `ssh -L 7860:localhost:7860 <cluster>` and open http://localhost:7860.

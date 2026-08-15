@@ -47,6 +47,8 @@ def main() -> None:
     quarantined = []
     for f in sorted(Path("data/library/phase_timelines").glob("*.json")):
         d = json.loads(f.read_text())
+        if d.get("source") == "uploaded":  # physician uploads never enter norms
+            continue
         segs = [s for s in d["segments"] if s["phase"] != "idle"]
         # video-level gate: all four anchors present in the raw prediction
         if not ANCHORS <= {s["phase"] for s in segs}:
