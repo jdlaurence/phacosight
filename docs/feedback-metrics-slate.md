@@ -131,3 +131,19 @@ learned component; license currently unspecified — resolve before touching. **
 - **Sequencing logic**: A+D+E are pure wins on existing outputs; B unlocks I and the
   envelopes in E; C turns everything into the actual product experience; F is the
   highest-value new perception; G packages it in educators' language.
+
+---
+
+## PI review disposition (2026-08-17, APPROVE WITH CONCERNS)
+
+**Blocking (both adopted):**
+- **B1 — operator attribution**: teaching cases mix hands (attending does the rhexis, takes over when cases degrade); metrics that silently blend operators would credit residents with attending work and vice versa — "worse than no feedback." A per-phase operator field (resident/attending/assisted) at upload, displayed on every metric, un-attributed cases excluded from resident comparisons. Ships before any Tier-1 prototype.
+- **B2 — kinematics gate**: the pre-registered temporal identity-stability probe (tool-track identity switches over full videos) runs BEFORE the 50-clip tip validation, both inside the B spike — mask identity flips corrupt tracks upstream of tracker accuracy.
+
+**Corrections adopted:** duration-vs-norms is the strongest replicated global correlate (ρ=−0.77) and already built — day-one reports lead with it; A-before-B is a cost/risk argument, not a validity gap. LLM narration is "ready to pilot behind attending review," not "ready" (best published config: 42% admissible). Ruzicki negative result is AUC 0.55–0.69; EyeSi 38% is an unadjusted association (motivation, never a promised effect); H's evidence is MSICS n=53 (different operation) — faculty-facing only until locally validated. Cohort percentiles are **"vs expert reference," not "vs peers"** — labeled everywhere; resident peer-norms require a separate table keyed off attribution. Efficiency metrics are displayed, never graded (gameable by rushing); tremor/SPARC never ranks residents. Cataract-LMM license contradiction to be resolved at source.
+
+**Recommended first increment (2–4 weeks):** B1 attribution field → A (eye stability suite) → D (conformal gating) → E-minus-envelopes (teaching moments + expert-clip retrieval) → C template-first (LLM variant attending-only) → B de-risk spike (identity probe + tip validation) → M-1 fusion-degradation test. Second: full B → E envelopes + exploratory I; F rhexis model; G packaging. G's "evidence-for-items, never auto-scores" is inviolable.
+
+**The one physician validation study:** blinded concurrent-validity + admissibility review on ~15–20 library surgeries — physician scores ICO-OSCAR blinded to our metrics, rates every feedback line (admissible/helpful/misleading/harmful), adjudicates duration disagreements (absorbs M-3). Yields local metric↔rating correlations, C-vs-template comparison, and the license to quote norms to residents. Nothing resident-facing ships before it. Also clock minutes-per-review (adoption risk).
+
+**Red-team de-risk (run first, GPU-cheap, zero physician time):** reproduce skill discrimination on Cataract-LMM's 170 expert-rated rhexis clips using OUR extraction stack — if our metrics can't separate their low-vs-high clips, stop and fix perception before building feedback UI.
