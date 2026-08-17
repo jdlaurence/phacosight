@@ -126,3 +126,14 @@ onboarding memo; (4) CATARACTS access request now; (5) M-1 fusion degradation te
 zero-label probe. Where accuracy stops mattering: in-domain frame-F1 beyond ~0.96 buys
 residents nothing — the product-visible residuals are idle timing, honest flag handling,
 and external validity.
+
+---
+
+## App roadmap — noted, not yet implemented (2026-08-17)
+
+- **Dexterity metric**: tool steadiness/shake + economy of movement + time, from the
+  Stage-1 masks (tip tracking → jerk/spectral-arc-length) — this is Stage-3b kinematics
+  surfaced as a physician-facing score. Gate: the temporal identity-stability probe.
+- **Procedure characterization**: a 1–2 sentence automated summary per surgery
+  (phase profile vs cohort, notable events, flags) rendered atop the review page —
+  template-based from metrics.json first; free-text generation only if templates fall short.

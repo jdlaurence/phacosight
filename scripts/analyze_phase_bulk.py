@@ -103,7 +103,8 @@ def video_features(video: Path, dino, seg, device, fps_out: float, batch: int = 
     def flush():
         xd = (torch.stack(buf_d).to(device).float().div_(255).permute(0, 3, 1, 2) - mean) / std
         xs = (torch.stack(buf_s).to(device).float().div_(255).permute(0, 3, 1, 2) - mean) / std
-        with torch.autocast("cuda", dtype=torch.float16):
+        with torch.autocast(device.type, dtype=torch.float16,
+                            enabled=device.type == "cuda"):
             out = dino(pixel_values=xd)
             n_special = 1 + getattr(dino.config, "num_register_tokens", 0)
             cls = out.pooler_output.float()

@@ -25,9 +25,14 @@ dependencies = [
 gpu = ["torchcodec"]          # NVDEC decode path (A40 machine)
 data = ["synapseclient>=4.0"] # dataset download
 dev = ["pytest"]
+app = ["fastapi", "uvicorn[standard]", "python-multipart"]  # physician web app
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.scripts]
+cataract-insight = "app.__main__:main"
+
+[tool.setuptools]
+packages = {find = {where = ["src"]}}
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

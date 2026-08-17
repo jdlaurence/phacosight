@@ -36,6 +36,7 @@ function route() {
   tooltip.hidden = true;
   if (page === "video" && arg) return renderDetail(decodeURIComponent(arg));
   if (page === "library") return renderLibrary();
+  if (page === "progress") return renderProgress();
   if (page === "upload") return renderUpload();
   return renderList();
 }
@@ -66,17 +67,20 @@ async function renderList() {
   const bar = el("div", "toolbar");
   const search = el("input"); search.type = "search"; search.placeholder = "Search case…";
   const srcSel = el("select", "", `<option value="">all sources</option>
-    <option value="library">archive</option><option value="labeled">annotated set</option>
+    <option value="library">base archive</option><option value="labeled">annotated set</option>
     <option value="uploaded">uploaded</option>`);
+  const docSel = el("select", "", `<option value="">all physicians</option>` +
+    [...new Set(vids.map(v => v.physician).filter(Boolean))].sort()
+      .map(d => `<option>${d}</option>`).join(""));
   const flagSel = el("select", "", `<option value="">any status</option>
     <option value="review">needs review</option><option value="clean">clean</option>`);
-  bar.append(search, srcSel, flagSel);
+  bar.append(search, srcSel, docSel, flagSel);
   view.append(bar);
 
   const card = el("div", "card");
   const table = el("table", "videos",
-    `<thead><tr><th>Case</th><th>Timeline</th><th>Duration</th><th>Segments</th>
-     <th>Flags</th><th>Status</th></tr></thead>`);
+    `<thead><tr><th>Case</th><th>Timeline</th><th>Duration</th><th>Physician</th>
+     <th>Date</th><th>Flags</th><th>Status</th></tr></thead>`);
   const tbody = el("tbody");
   table.append(tbody); card.append(table); view.append(card);
 
@@ -86,6 +90,7 @@ async function renderList() {
     const rows = vids.filter(v =>
       v.case.toLowerCase().includes(q) &&
       (!srcSel.value || v.source === srcSel.value) &&
+      (!docSel.value || v.physician === docSel.value) &&
       (!flagSel.value || (flagSel.value === "review") === (v.flag_fraction > 0.25)));
     for (const v of rows.slice(0, 400)) {
       const tr = el("tr");
@@ -94,15 +99,17 @@ async function renderList() {
       const src = {library: "archive", labeled: "annotated", uploaded: "uploaded"}[v.source];
       tr.innerHTML = `<td><b>${v.case}</b><br><span class='chip neutral'>${src}</span></td>
         <td><div class='minitl' data-case='${v.case}'></div></td>
-        <td class='num'>${fmtT(v.duration_s)}</td><td class='num'>${v.n_segments}</td>
+        <td class='num'>${fmtT(v.duration_s)}</td>
+        <td>${v.physician || "<span class='sub'>—</span>"}</td>
+        <td class='num'>${v.surgery_date || "<span class='sub'>—</span>"}</td>
         <td class='num'>${(v.flag_fraction * 100).toFixed(0)}%</td><td>${status}</td>`;
       tr.onclick = () => location.hash = `#/video/${v.case}`;
       tbody.append(tr);
     }
     lazyMiniTimelines();
-    if (!rows.length) tbody.innerHTML = "<tr><td colspan='6' class='empty'>No matches.</td></tr>";
+    if (!rows.length) tbody.innerHTML = "<tr><td colspan='7' class='empty'>No matches.</td></tr>";
   };
-  [search, srcSel, flagSel].forEach(x => x.addEventListener("input", draw));
+  [search, srcSel, docSel, flagSel].forEach(x => x.addEventListener("input", draw));
   draw();
 }
 
@@ -325,10 +332,46 @@ async function renderLibrary() {
   const count = el("span", "sub", "");
   bar.append(sel, confLabel, conf, count);
   view.append(bar);
+  const hero = el("div", "card phase-hero");
+  view.append(hero);
   const grid = el("div", "lib-grid");
   view.append(grid);
 
+  const drawHero = async () => {
+    try {
+      const st = await api(`/api/phase_stats?phase=${encodeURIComponent(sel.value)}`);
+      const color = PHASE_COLORS[sel.value];
+      hero.innerHTML = `
+        <div>
+          <h2 style="display:flex;align-items:center">
+            <i style="width:11px;height:11px;border-radius:3px;background:${color};
+              display:inline-block;margin-right:8px"></i>${nice(sel.value)} — cohort profile</h2>
+          <div class="tiles">
+            <div class="tile"><b class="num">${st.total.p50}s</b>
+              <span>median total per surgery</span></div>
+            <div class="tile"><b class="num">${st.total.p25}–${st.total.p75}s</b>
+              <span>interquartile range</span></div>
+            <div class="tile"><b class="num">${(st.presence * 100).toFixed(0)}%</b>
+              <span>of ${st.n_videos.toLocaleString()} surgeries include it</span></div>
+            <div class="tile"><b class="num">${st.segments_per_video}×</b>
+              <span>typical repeats (median ${st.segment_median_s}s each)</span></div>
+          </div>
+          <div style="margin-top:14px">
+            <span class="sub" style="margin:0">typical position in surgery</span>
+            <div class="posbar"><i style="left:${(st.typical_position * 100).toFixed(1)}%"></i></div>
+            <div style="display:flex;justify-content:space-between" class="axis-note">
+              <span>start</span><span>end</span></div>
+          </div>
+        </div>
+        <div>
+          <span class="sub" style="margin:0">distribution of per-surgery totals (s)</span>
+          ${histSVG(st.histogram, color)}
+        </div>`;
+    } catch { hero.innerHTML = "<p class='empty'>No cohort statistics for this phase.</p>"; }
+  };
+
   const draw = async () => {
+    drawHero();
     confLabel.textContent = `min confidence ${Number(conf.value).toFixed(2)}`;
     grid.innerHTML = "<p class='empty'>Searching…</p>";
     const res = await api(`/api/search?phase=${encodeURIComponent(sel.value)}&min_conf=${conf.value}`);
@@ -361,16 +404,26 @@ function renderUpload() {
     "takes about a minute once the models are warm."));
   const box = el("div", "card upload-box");
   const input = el("input"); input.type = "file"; input.accept = "video/mp4";
+  const doc = el("input"); doc.type = "text"; doc.placeholder = "e.g. Dr. Rivera";
+  const date = el("input"); date.type = "date";
+  const fileF = el("label", "field", "Recording (mp4)");
+  fileF.append(input);
+  const docF = el("label", "field",
+    "Physician <span class='sub' style='margin:0'>(enables the progress view)</span>");
+  docF.append(doc);
+  const dateF = el("label", "field", "Surgery date");
+  dateF.append(date);
   const go = el("button", "", "Upload & analyze");
   const prog = el("div", "progress"); prog.hidden = true;
   prog.innerHTML = `<div class="bar"><i style="width:0%"></i></div><p></p>`;
-  box.append(input, document.createElement("br"), document.createElement("br"), go, prog);
+  box.append(fileF, docF, dateF, go, prog);
   view.append(box);
 
   go.onclick = async () => {
     if (!input.files.length) return alert("Choose an mp4 first.");
     go.disabled = true; prog.hidden = false;
     const fd = new FormData(); fd.append("file", input.files[0]);
+    fd.append("physician", doc.value); fd.append("surgery_date", date.value);
     prog.querySelector("p").textContent = "Uploading…";
     prog.querySelector("i").style.width = "10%";
     const r = await fetch("/api/upload", {method: "POST", body: fd});
@@ -389,4 +442,109 @@ function renderUpload() {
       if (j.status === "error") { clearInterval(poll); go.disabled = false; }
     }, 1500);
   };
+}
+
+/* ---------------- shared mini-charts ---------------- */
+function histSVG(h, color) {
+  const max = Math.max(...h.counts, 1);
+  const n = h.counts.length;
+  const bars = h.counts.map((c, i) => {
+    const bh = 86 * c / max;
+    return `<rect x="${(i * 100 / n).toFixed(2)}" y="${(90 - bh).toFixed(2)}"
+      width="${(100 / n - 0.5).toFixed(2)}" height="${bh.toFixed(2)}"
+      fill="${color}" fill-opacity="0.85" rx="0.6"></rect>`;
+  }).join("");
+  const lo = h.edges[0], hi = h.edges[h.edges.length - 1];
+  return `<svg class="hist" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <line x1="0" y1="90" x2="100" y2="90" stroke="#d0d5d1" stroke-width="0.6"/>
+      ${bars}
+      <text x="0" y="98" font-size="6" fill="#8a948f">${Math.round(lo)}s</text>
+      <text x="100" y="98" font-size="6" fill="#8a948f" text-anchor="end">${Math.round(hi)}s</text>
+    </svg>`;
+}
+
+function sparkSVG(points, cohort, color) {
+  /* points: [{x: 0-1, y, label}], cohort: {p25,p50,p75} in y units */
+  const ys = points.map(p => p.y).concat(cohort ? [cohort.p25, cohort.p75] : []);
+  const yMax = Math.max(...ys) * 1.15 || 1;
+  const X = x => 6 + 90 * x, Y = y => 92 - 84 * y / yMax;
+  let band = "";
+  if (cohort) {
+    band = `<rect x="6" y="${Y(cohort.p75).toFixed(1)}" width="90"
+        height="${(Y(cohort.p25) - Y(cohort.p75)).toFixed(1)}" fill="#e3f1ef"></rect>
+      <line x1="6" x2="96" y1="${Y(cohort.p50).toFixed(1)}" y2="${Y(cohort.p50).toFixed(1)}"
+        stroke="#0e7569" stroke-width="0.5" stroke-dasharray="2 2"/>`;
+  }
+  const path = points.map((p, i) =>
+    `${i ? "L" : "M"}${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(" ");
+  const dots = points.map(p =>
+    `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="1.8" fill="${color}">
+       <title>${p.label}</title></circle>`).join("");
+  return `<svg class="spark" viewBox="0 0 100 100" preserveAspectRatio="none">
+      ${band}
+      <line x1="6" y1="92" x2="96" y2="92" stroke="#d0d5d1" stroke-width="0.5"/>
+      ${points.length > 1 ? `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.1"/>` : ""}
+      ${dots}
+      <text x="6" y="8" font-size="6" fill="#8a948f">${Math.round(yMax)}s</text>
+    </svg>`;
+}
+
+/* ---------------- progress ---------------- */
+async function renderProgress() {
+  view.innerHTML = "";
+  view.append(el("h1", "", "My progress"));
+  view.append(el("p", "sub",
+    "Your uploaded surgeries over time. Shaded band = cohort interquartile range; " +
+    "dashed line = cohort median."));
+  const docs = await api("/api/physicians");
+  if (!docs.length) {
+    view.append(el("p", "empty",
+      "No surgeries with a physician name yet. Upload a video with your name filled in " +
+      "and it will appear here."));
+    return;
+  }
+  const bar = el("div", "toolbar");
+  const sel = el("select");
+  for (const d of docs) sel.append(new Option(`${d.name} (${d.n_videos})`, d.name));
+  bar.append(sel);
+  view.append(bar);
+  const wrap = el("div");
+  view.append(wrap);
+
+  const draw = async () => {
+    wrap.innerHTML = "<p class='empty'>Loading…</p>";
+    const pr = await api(`/api/progress?physician=${encodeURIComponent(sel.value)}`);
+    wrap.innerHTML = "";
+    const vids = pr.videos;
+    if (!vids.length) { wrap.append(el("p", "empty", "No surgeries yet.")); return; }
+    const xs = vids.map((v, i) => vids.length > 1 ? i / (vids.length - 1) : 0.5);
+    const grid = el("div", "prog-grid");
+
+    const total = el("div", "card prog-card");
+    total.innerHTML = `<h3>Total operative time</h3>` +
+      sparkSVG(vids.map((v, i) => ({x: xs[i], y: v.duration_s,
+        label: `${v.case} · ${v.surgery_date || "no date"} · ${fmtT(v.duration_s)}`})), null, "#1c211f") +
+      `<div class="axis-note">${vids[0].surgery_date || ""} → ${vids[vids.length - 1].surgery_date || ""}
+       · ${vids.length} surgeries</div>`;
+    grid.append(total);
+
+    const phaseOrder = Object.keys(PHASE_COLORS).filter(p => p !== "idle");
+    for (const p of phaseOrder) {
+      const pts = vids.map((v, i) => v.phases[p] ? {x: xs[i], y: v.phases[p].total_s,
+        label: `${v.case} · ${v.surgery_date || "no date"} · ${v.phases[p].total_s}s` +
+          (v.phases[p].percentile !== null ? ` (p${Math.round(v.phases[p].percentile)})` : "")}
+        : null).filter(Boolean);
+      if (!pts.length) continue;
+      const c = el("div", "card prog-card");
+      c.innerHTML = `<h3><i style="background:${PHASE_COLORS[p]}"></i>${nice(p)}</h3>` +
+        sparkSVG(pts, pr.cohort[p], PHASE_COLORS[p]) +
+        `<div class="axis-note">latest: ${pts[pts.length - 1].y.toFixed(0)}s
+         ${vids[vids.length - 1].phases[p] && vids[vids.length - 1].phases[p].percentile !== null
+           ? `· p${Math.round(vids[vids.length - 1].phases[p].percentile)} of cohort` : ""}</div>`;
+      grid.append(c);
+    }
+    wrap.append(grid);
+  };
+  sel.addEventListener("input", draw);
+  draw();
 }

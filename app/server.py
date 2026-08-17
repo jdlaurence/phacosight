@@ -1,34 +1,30 @@
 """Physician-facing web app: browse analyzed surgeries, inspect timelines and
-metrics against cohort norms, search the phase library, upload new videos for
-GPU analysis.
+metrics against cohort norms, search the phase library, track progress over
+time, upload new videos for analysis.
 
-    .venv/bin/uvicorn app.server:app --host 0.0.0.0 --port 7860
-    # then ssh -L 7860:localhost:7860 <cluster> and open http://localhost:7860
+Run: `python -m app`  (see app/__main__.py for options)
 """
 
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-import sys
+from .config import FULL_DIR, NORMS_PATH, PHASE_DIR, REPO, TIMELINE_DIR, UPLOAD_DIR
+from .inference import InferenceService
 
-REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 from cataract_video.phase.timeline import PHASES, case_paths, load_segments, phase_cases  # noqa: E402
 
-from .inference import UPLOAD_DIR, InferenceService  # noqa: E402
-
-TIMELINES = REPO / "data" / "library" / "phase_timelines"
-NORMS_PATH = REPO / "data" / "library" / "phase_norms.json"
 CLIP_CACHE = Path(tempfile.gettempdir()) / "cataract_clips"
 FLAG = {"conf": 0.7, "dis": 0.5}
 
@@ -38,8 +34,7 @@ service = InferenceService()
 
 # ---------------------------------------------------------------- data access
 def video_path(case: str) -> Path:
-    for p in (REPO / "data/full" / f"{case}.mp4",
-              REPO / "data/phase/videos" / f"{case}.mp4",
+    for p in (FULL_DIR / f"{case}.mp4", PHASE_DIR / "videos" / f"{case}.mp4",
               UPLOAD_DIR / f"{case}.mp4"):
         if p.exists():
             return p
@@ -47,14 +42,18 @@ def video_path(case: str) -> Path:
 
 
 def load_timeline(case: str) -> dict:
-    p = TIMELINES / f"{case}.json"
+    p = TIMELINE_DIR / f"{case}.json"
     if not p.exists():
         raise HTTPException(404, f"{case} not analyzed")
     return json.loads(p.read_text())
 
 
+def labeled_cases() -> list[str]:
+    return phase_cases(PHASE_DIR) if (PHASE_DIR / "annotations").exists() else []
+
+
 def labeled_gt(case: str) -> list | None:
-    ann = REPO / "data/phase/annotations" / case / f"{case}_annotations_phases.csv"
+    ann = PHASE_DIR / "annotations" / case / f"{case}_annotations_phases.csv"
     if not ann.exists():
         return None
     return [{"phase": PHASES[r.phase_id], "start_s": r.start_sec, "end_s": r.end_sec}
@@ -62,33 +61,53 @@ def labeled_gt(case: str) -> list | None:
 
 
 class Norms:
-    """Raw per-video phase-total distributions (labeled GT + gated bulk)."""
+    """Cohort statistics from labeled GT + gated base-library predictions.
+
+    Uploaded videos never contribute. Per phase: per-video totals (`dist`),
+    per-segment durations, first-occurrence position, videos-containing count.
+    """
 
     def __init__(self):
         self.dist: dict[str, list[float]] = defaultdict(list)
-        for c in phase_cases(REPO / "data/phase"):
-            _, ann = case_paths(REPO / "data/phase", c)
-            totals = defaultdict(float)
-            for r in load_segments(ann).itertuples():
-                totals[PHASES[r.phase_id]] += r.end_sec - r.start_sec
+        self.seg_durs: dict[str, list[float]] = defaultdict(list)
+        self.first_frac: dict[str, list[float]] = defaultdict(list)
+        self.videos_with: dict[str, int] = defaultdict(int)
+        self.n_videos = 0
+
+        for c in labeled_cases():
+            gt = labeled_gt(c)
+            self.n_videos += 1
+            end = max(s["end_s"] for s in gt)
+            totals, first = defaultdict(float), {}
+            for s in gt:
+                totals[s["phase"]] += s["end_s"] - s["start_s"]
+                self.seg_durs[s["phase"]].append(s["end_s"] - s["start_s"])
+                first.setdefault(s["phase"], s["start_s"])
             for p, v in totals.items():
                 self.dist[p].append(v)
+                self.videos_with[p] += 1
+                self.first_frac[p].append(first[p] / max(end, 1))
+
         quarantined = set()
         if NORMS_PATH.exists():
             quarantined = set(json.loads(NORMS_PATH.read_text())
                               ["provenance"]["bulk_quarantined"])
-        for f in TIMELINES.glob("*.json"):
+        for f in TIMELINE_DIR.glob("*.json"):
             d = json.loads(f.read_text())
             if d["case"] in quarantined or d.get("source") == "uploaded":
                 continue
+            self.n_videos += 1
             by_phase = defaultdict(list)
             for s in d["segments"]:
                 if s["phase"] != "idle":
                     by_phase[s["phase"]].append(s)
             for p, ss in by_phase.items():
+                self.videos_with[p] += 1
                 if all(s["confidence"] >= FLAG["conf"] and s["disagreement"] <= FLAG["dis"]
                        for s in ss):
                     self.dist[p].append(sum(s["end_s"] - s["start_s"] for s in ss))
+                    self.seg_durs[p].extend(s["end_s"] - s["start_s"] for s in ss)
+                    self.first_frac[p].append(ss[0]["start_s"] / max(d["duration_s"], 1))
         self.dist = {p: sorted(v) for p, v in self.dist.items()}
 
     def percentile(self, phase: str, value: float) -> float | None:
@@ -102,7 +121,6 @@ norms = Norms()
 
 
 def video_metrics(d: dict) -> dict:
-    """Per-phase totals, idle time, cohort percentiles, flags."""
     segs = d["segments"]
     totals = defaultdict(float)
     flagged = []
@@ -133,8 +151,6 @@ def video_metrics(d: dict) -> dict:
         "flagged_idx": flagged,
         "flag_fraction": round(len(flagged) / max(1, len(action)), 3),
         "median_confidence": round(float(np.median(confs)), 3),
-        "needs_review": len(flagged) / max(1, len(action)) > 0.25
-                        or float(np.mean(confs)) < 0.8,
     }
 
 
@@ -142,7 +158,7 @@ def video_metrics(d: dict) -> dict:
 @app.get("/api/videos")
 def list_videos():
     out = []
-    for f in sorted(TIMELINES.glob("*.json")):
+    for f in sorted(TIMELINE_DIR.glob("*.json")):
         d = json.loads(f.read_text())
         action = [s for s in d["segments"] if s["phase"] != "idle"]
         n_flag = sum(1 for s in action if s["confidence"] < FLAG["conf"]
@@ -152,14 +168,16 @@ def list_videos():
             "n_segments": len(d["segments"]),
             "flag_fraction": round(n_flag / max(1, len(action)), 3),
             "source": d.get("source", "library"),
+            "physician": d.get("physician"),
+            "surgery_date": d.get("surgery_date"),
             "has_gt": labeled_gt(d["case"]) is not None,
         })
-    for c in phase_cases(REPO / "data/phase"):  # labeled videos: GT-only entries
-        if not (TIMELINES / f"{c}.json").exists():
+    for c in labeled_cases():
+        if not (TIMELINE_DIR / f"{c}.json").exists():
             gt = labeled_gt(c)
             out.append({"case": c, "duration_s": round(max(s["end_s"] for s in gt), 1),
-                        "n_segments": len(gt), "flag_fraction": 0.0,
-                        "source": "labeled", "has_gt": True})
+                        "n_segments": len(gt), "flag_fraction": 0.0, "source": "labeled",
+                        "physician": None, "surgery_date": None, "has_gt": True})
     return out
 
 
@@ -171,33 +189,69 @@ def get_video(case: str):
         gt = labeled_gt(case)
         if gt is None:
             raise
-        dur = max(s["end_s"] for s in gt)
-        d = {"case": case, "duration_s": dur, "segments": [], "source": "labeled"}
+        d = {"case": case, "duration_s": max(s["end_s"] for s in gt),
+             "segments": [], "source": "labeled"}
     d["metrics"] = video_metrics(d) if d["segments"] else None
     d["ground_truth"] = labeled_gt(case)
     d["phase_names"] = list(PHASES)
     return d
 
 
-@app.get("/api/norms")
-def get_norms():
-    return {p: {"n": len(v),
-                "p10": v[int(0.10 * len(v))], "p25": v[int(0.25 * len(v))],
-                "p50": v[int(0.50 * len(v))], "p75": v[int(0.75 * len(v))],
-                "p90": v[min(len(v) - 1, int(0.90 * len(v)))]}
-            for p, v in norms.dist.items()}
+@app.get("/api/phase_stats")
+def phase_stats(phase: str):
+    dist = norms.dist.get(phase, [])
+    if not dist:
+        raise HTTPException(404, f"no cohort data for {phase}")
+    a = np.array(dist)
+    segs = np.array(norms.seg_durs.get(phase, [0]))
+    counts, edges = np.histogram(a, bins=24)
+    return {
+        "phase": phase,
+        "n_videos": norms.n_videos,
+        "videos_with_phase": norms.videos_with.get(phase, 0),
+        "presence": round(norms.videos_with.get(phase, 0) / max(1, norms.n_videos), 3),
+        "total": {f"p{p}": round(float(np.percentile(a, p)), 1) for p in (10, 25, 50, 75, 90)},
+        "segments_per_video": round(len(segs) / max(1, len(a)), 2),
+        "segment_median_s": round(float(np.median(segs)), 1),
+        "typical_position": round(float(np.median(norms.first_frac.get(phase, [0]))), 3),
+        "histogram": {"counts": counts.tolist(),
+                      "edges": [round(float(e), 1) for e in edges]},
+    }
 
 
-@app.get("/api/search")
-def search(phase: str, min_conf: float = 0.9, limit: int = 60):
-    hits = []
-    for f in sorted(TIMELINES.glob("*.json")):
+@app.get("/api/physicians")
+def physicians():
+    seen = defaultdict(int)
+    for f in TIMELINE_DIR.glob("*.json"):
         d = json.loads(f.read_text())
-        for s in d["segments"]:
-            if s["phase"] == phase and s["confidence"] >= min_conf:
-                hits.append({"case": d["case"], **s})
-    hits.sort(key=lambda s: -s["confidence"])
-    return {"total": len(hits), "hits": hits[:limit]}
+        if d.get("physician"):
+            seen[d["physician"]] += 1
+    return [{"name": k, "n_videos": v} for k, v in sorted(seen.items())]
+
+
+@app.get("/api/progress")
+def progress(physician: str):
+    rows = []
+    for f in TIMELINE_DIR.glob("*.json"):
+        d = json.loads(f.read_text())
+        if d.get("physician") != physician:
+            continue
+        m = video_metrics(d)
+        rows.append({
+            "case": d["case"],
+            "surgery_date": d.get("surgery_date") or d.get("uploaded_at"),
+            "duration_s": d["duration_s"],
+            "idle_s": m["idle_s"],
+            "flag_fraction": m["flag_fraction"],
+            "phases": {p["phase"]: {"total_s": p["total_s"], "percentile": p["percentile"]}
+                       for p in m["phases"]},
+        })
+    rows.sort(key=lambda r: (r["surgery_date"] or "", r["case"]))
+    cohort = {p: {"p25": round(float(np.percentile(v, 25)), 1),
+                  "p50": round(float(np.percentile(v, 50)), 1),
+                  "p75": round(float(np.percentile(v, 75)), 1)}
+              for p, v in norms.dist.items() if v}
+    return {"physician": physician, "videos": rows, "cohort": cohort}
 
 
 @app.get("/api/frame")
@@ -215,6 +269,18 @@ def frame(case: str, t: float, h: int = 240):
                     headers={"Cache-Control": "max-age=86400"})
 
 
+@app.get("/api/search")
+def search(phase: str, min_conf: float = 0.9, limit: int = 60):
+    hits = []
+    for f in sorted(TIMELINE_DIR.glob("*.json")):
+        d = json.loads(f.read_text())
+        for s in d["segments"]:
+            if s["phase"] == phase and s["confidence"] >= min_conf:
+                hits.append({"case": d["case"], **s})
+    hits.sort(key=lambda s: -s["confidence"])
+    return {"total": len(hits), "hits": hits[:limit]}
+
+
 @app.get("/api/clip")
 def clip(case: str, start: float, end: float):
     if end - start <= 0 or end - start > 300:
@@ -228,8 +294,7 @@ def clip(case: str, start: float, end: float):
             capture_output=True, timeout=60)
         if r.returncode != 0:
             raise HTTPException(500, "ffmpeg failed")
-    return FileResponse(out, media_type="video/mp4",
-                        filename=f"{case}_{PHASES[0] and ''}{start:.0f}s.mp4")
+    return FileResponse(out, media_type="video/mp4", filename=f"{case}_{start:.0f}s.mp4")
 
 
 @app.get("/api/stream/{case}")
@@ -262,10 +327,9 @@ def stream(case: str, request: Request):
 
 
 @app.post("/api/upload")
-async def upload(file: UploadFile):
+async def upload(file: UploadFile, physician: str = Form(""), surgery_date: str = Form("")):
     if not file.filename.lower().endswith(".mp4"):
         raise HTTPException(400, "mp4 only")
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     stem = Path(file.filename).stem.replace(" ", "_")
     dest = UPLOAD_DIR / f"{stem}.mp4"
     i = 1
@@ -274,7 +338,8 @@ async def upload(file: UploadFile):
         i += 1
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
-    job_id = service.submit(dest)
+    job_id = service.submit(dest, {"physician": physician.strip(),
+                                   "surgery_date": surgery_date.strip()})
     return {"job_id": job_id, "case": dest.stem}
 
 
@@ -283,7 +348,7 @@ def job(job_id: str):
     j = service.jobs.get(job_id)
     if not j:
         raise HTTPException(404, "unknown job")
-    return {k: v for k, v in j.items() if k != "path"}
+    return {k: v for k, v in j.items() if k not in ("path", "meta")}
 
 
 app.mount("/", StaticFiles(directory=Path(__file__).parent / "static", html=True))

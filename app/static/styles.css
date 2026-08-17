@@ -148,3 +148,29 @@ svg.timeline rect.seg:hover { stroke: var(--ink); stroke-width: 1.2; }
   max-width: 260px; line-height: 1.4; }
 .tooltip small { color: #b8c4bf; }
 .empty { color: var(--ink-3); padding: 30px; text-align: center; }
+
+/* ---------- phase stats header (library) ---------- */
+.phase-hero { display: grid; grid-template-columns: 1fr minmax(300px, 420px); gap: 20px;
+  padding: 20px 22px; margin-bottom: 18px; align-items: center; }
+@media (max-width: 900px) { .phase-hero { grid-template-columns: 1fr; } }
+.phase-hero .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px 18px; }
+.phase-hero .tile b { display: block; font-size: 20px; letter-spacing: -0.01em; }
+.phase-hero .tile span { color: var(--ink-3); font-size: 12px; }
+.posbar { position: relative; height: 8px; border-radius: 4px; background: var(--line);
+  margin-top: 6px; }
+.posbar i { position: absolute; top: -3px; width: 3px; height: 14px; border-radius: 2px;
+  background: var(--accent); }
+svg.hist { width: 100%; height: 110px; display: block; }
+
+/* ---------- progress ---------- */
+.prog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px; margin-top: 16px; }
+.prog-card { padding: 16px 18px; }
+.prog-card h3 { font-size: 13.5px; margin: 0 0 4px; display: flex; align-items: center; }
+.prog-card h3 i { width: 9px; height: 9px; border-radius: 2px; margin-right: 7px;
+  display: inline-block; }
+svg.spark { width: 100%; height: 120px; display: block; }
+.axis-note { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.field { display: block; margin: 12px 0; font-size: 13.5px; color: var(--ink-2); }
+.field input { display: block; margin-top: 5px; width: 100%; }
