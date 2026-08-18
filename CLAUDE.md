@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. **Per-phase instrument-movement feedback** — kinematic metrics (path length, velocity, smoothness, decentration) for each surgical step, compared against cohort norms.
 6. **Phase-indexed video library** — analyzed videos are indexed by surgical phase so past surgeries can be searched by step (e.g. "all main incisions") and matching clips retrieved.
 
-The Cataract-1K dataset (described below) is the training/evaluation data for this work: its phase-annotation CSVs support the timing/recognition components, its pixel-level annotations support segmentation, and its irregularity subsets support event detection. New model training, inference, and report-generation code should build on the existing preprocessing scripts and committed cross-validation splits rather than reinventing them — in particular, reuse the class-ID conventions and patient-wise fold splits documented below so results remain comparable to the paper's benchmarks.
+The training corpus is designed as a **composite of multiple datasets**; the Cataract-1K dataset (described below) is its first and anchor component and the basis of all results to date. Augmenting the corpus with additional datasets is the next step on the roadmap. Within the Cataract-1K component: its phase-annotation CSVs support the timing/recognition components, its pixel-level annotations support segmentation, and its irregularity subsets support event detection. New model training, inference, and report-generation code should build on the existing preprocessing scripts and committed cross-validation splits rather than reinventing them — in particular, reuse the class-ID conventions and patient-wise fold splits documented below so Cataract-1K results remain comparable to the paper's benchmarks.
 
 ## PI review (required step)
 
@@ -63,7 +63,7 @@ Both directories have parallel subfolders for the anatomy+instruments task and t
 
 ## Citation/license constraints
 
-Dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it.
+PhacoSight code is Apache-2.0 (root `LICENSE` + `NOTICE`); the retained upstream release materials (`Dataset_codes/`, `TrainIDs_*/`) are MIT © Negin Ghamsarian (`Dataset_codes/LICENSE`). The Cataract-1K dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it. As additional datasets join the composite corpus, record their licenses/citation requirements here and in README.md the same way.
 
 ## Physician web app
 

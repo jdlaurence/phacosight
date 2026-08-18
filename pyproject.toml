@@ -5,7 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "phacosight"
 version = "0.1.0"
-description = "PhacoSight: cataract surgery video analysis — segmentation, phase recognition, irregularity detection, and resident feedback reports (built on Cataract-1K)"
+description = "PhacoSight: cataract surgery video analysis — segmentation, phase recognition, irregularity detection, and resident feedback reports"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 dependencies = [
     "numpy",

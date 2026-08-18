@@ -1,0 +1,9 @@
+PhacoSight
+Copyright 2026 J.D. Laurence-Chasen
+
+This repository retains materials from the Cataract-1K dataset-release
+repository (https://github.com/Negin-Ghamsarian/Cataract-1K) under
+Dataset_codes/ and the TrainIDs_* directories, licensed under the MIT
+License, Copyright (c) 2024 Negin Ghamsarian (see Dataset_codes/LICENSE).
+The Cataract-1K dataset itself is distributed separately under CC BY 4.0
+and requires citation of its publication (see README.md).

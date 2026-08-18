@@ -75,6 +75,14 @@ Splits are patient-wise and committed under `TrainIDs_*/`; class-ID conventions 
 codified in `src/phacosight/labels.py` and mirror the upstream mask scripts exactly, so
 results remain comparable to the Cataract-1K paper's benchmarks.
 
+## License
+
+PhacoSight is licensed under the [Apache License 2.0](LICENSE) (see also [NOTICE](NOTICE)).
+The Cataract-1K release materials retained in this repository (`Dataset_codes/`, the
+`TrainIDs_*/` splits) carry the upstream [MIT license](Dataset_codes/LICENSE)
+(© 2024 Negin Ghamsarian), and the Cataract-1K dataset itself is distributed under
+CC BY 4.0 with a citation requirement — see [Data](#data).
+
 ## Physician web app
 
 ```bash
@@ -88,10 +96,13 @@ for GPU analysis. See [`app/README.md`](app/README.md).
 
 ## Data
 
-PhacoSight is trained and evaluated on **[Cataract-1K](https://arxiv.org/pdf/2312.06295.pdf)**
-(Ghamsarian et al.): 1000 cataract surgery videos with phase annotations for 56 videos,
-pixel-level anatomy/instrument annotations for 2256 frames from 30 videos, and
-irregularity subsets. The dataset itself is **not** in this repository — it is
+PhacoSight's training corpus is designed as a **composite of multiple surgical video
+datasets**. Its first and anchor component — and the basis of all committed results to
+date — is **[Cataract-1K](https://arxiv.org/pdf/2312.06295.pdf)** (Ghamsarian et al.):
+1000 cataract surgery videos with phase annotations for 56 videos, pixel-level
+anatomy/instrument annotations for 2256 frames from 30 videos, and irregularity
+subsets. Augmenting the corpus with additional datasets is the next step on the
+roadmap. The datasets themselves are **not** in this repository — Cataract-1K is
 downloaded from Synapse. The upstream preprocessing scripts (`Dataset_codes/`) and
 cross-validation split CSVs (`TrainIDs_*/`) are retained from the
 [dataset-release repository](https://github.com/Negin-Ghamsarian/Cataract-1K); the full
