@@ -22,10 +22,16 @@ composite corpus (see README Data section).*
 ## Data facts (audited 2026-08-18; re-audit video properties after extraction)
 
 - **Source:** CATARACTS (Al Hajj et al., Brest University Hospital), IEEE DataPort open
-  access. 50 cataract-surgery videos; challenge docs say 1920×1080 @ ~30 fps, mean duration
-  ~10 min 56 s. **To verify on disk:** actual resolution/fps/codec, and video-file ↔ GT-CSV
-  pairing (the S3 manifest's expansion of `videos.zip` is garbled, including a spurious
-  procfs tree — extraction must be followed by an inventory pass).
+  access. 50 microscope videos (a parallel `videos/tray/` instrument-tray view exists in
+  the archive; unused). **Inventory audited on disk 2026-08-18:** all 50 videos
+  1920×1080; fps is *variable and non-integer* — ≈29.17–29.20 fps in four distinct exact
+  rationals (7500/257, 90000/3083, 45000/1541, 18000/617) — so all time↔frame math must
+  use each video's own fps (the extractor already does). **GT↔video frame counts match
+  exactly for all 50 pairs.** Naming: 2020 dev/test splits keep 2017 filenames — dev =
+  {test01, test07, test14, test16, test19}; test\_gt = the other twenty `test*` videos.
+  Vitrectomy (step 9) videos, recorded per C5: train19 (train; 40-min case, 71,066
+  frames), test07 (dev), test02 (test; 55,711 frames) — the complicated cases are also
+  the longest. The stray procfs tree in the archive was excluded at extraction.
 - **Phase GT (CATARACTS_2020):** per-frame `Frame,Steps` CSVs at native frame rate,
   50 videos = 25 train / 5 dev / 20 test, **test GT included** → all 50 usable.
   Frame counts sum to ≈ full-length videos (≈495k labeled frames in train alone).
