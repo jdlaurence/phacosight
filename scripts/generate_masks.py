@@ -20,7 +20,7 @@ every such frame also carries a proper Cornea/Pupil polygon.
 
 Usage:
     python scripts/generate_masks.py \
-        --data-root data/segmentation/Annotations/Images-and-Supervisely-Annotations
+        --data-root data/cataract1k/segmentation/Annotations/Images-and-Supervisely-Annotations
 """
 
 import argparse
@@ -88,7 +88,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data-root",
-        default="data/segmentation/Annotations/Images-and-Supervisely-Annotations",
+        default="data/cataract1k/segmentation/Annotations/Images-and-Supervisely-Annotations",
         help="directory containing the case_* folders",
     )
     parser.add_argument("--workers", type=int, default=8)

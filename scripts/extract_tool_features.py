@@ -67,7 +67,7 @@ def probs_features(models: dict, batch: torch.Tensor) -> np.ndarray:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--phase-root", default="data/phase")
+    parser.add_argument("--phase-root", default="data/cataract1k/phase")
     parser.add_argument("--dino-cache", default="data/features/phase_dinov2l")
     parser.add_argument("--out", default="data/features/phase_tools")
     parser.add_argument("--map", default="TrainIDs_PhaseRecognition/seg_checkpoint_map.csv")

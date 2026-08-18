@@ -15,8 +15,8 @@ DATA_ROOT = Path(os.environ.get("PHACOSIGHT_DATA_ROOT", REPO / "data"))
 TIMELINE_DIR = DATA_ROOT / "library" / "phase_timelines"
 NORMS_PATH = DATA_ROOT / "library" / "phase_norms.json"
 UPLOAD_DIR = DATA_ROOT / "library" / "uploads"
-PHASE_DIR = DATA_ROOT / "phase"            # labeled subset (optional)
-FULL_DIR = DATA_ROOT / "full"              # raw archive videos (optional)
+PHASE_DIR = DATA_ROOT / "cataract1k" / "phase"   # labeled subset (optional)
+FULL_DIR = DATA_ROOT / "cataract1k" / "full"     # raw archive videos (optional)
 ASSETS = REPO / "app" / "assets"           # small committed artifacts (grammar, ...)
 RUNS = REPO / "runs"                       # model checkpoints
 

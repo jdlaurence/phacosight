@@ -53,7 +53,7 @@ Download the datasets (requires a [Synapse](https://www.synapse.org) account and
 `SYNAPSE_AUTH_TOKEN`):
 
 ```bash
-.venv/bin/python scripts/download_data.py --sets segmentation phase   # → data/
+.venv/bin/python scripts/download_data.py --sets segmentation phase   # → data/cataract1k/
 ```
 
 ## Training
@@ -102,8 +102,12 @@ date — is **[Cataract-1K](https://arxiv.org/pdf/2312.06295.pdf)** (Ghamsarian 
 1000 cataract surgery videos with phase annotations for 56 videos, pixel-level
 anatomy/instrument annotations for 2256 frames from 30 videos, and irregularity
 subsets. Augmenting the corpus with additional datasets is the next step on the
-roadmap. The datasets themselves are **not** in this repository — Cataract-1K is
-downloaded from Synapse. The upstream preprocessing scripts (`Dataset_codes/`) and
+roadmap, starting with **[CATARACTS](https://ieee-dataport.org/open-access/cataracts)**
+(Al Hajj et al.: 50 cataract surgery videos with tool-usage and phase annotations;
+open access on IEEE DataPort, downloaded via `scripts/download_cataracts.py`). The
+datasets themselves are **not** in this repository — Cataract-1K is downloaded from
+Synapse. Raw datasets live under `data/<dataset>/`; derived artifacts under
+`data/features/` and `data/library/`. The upstream preprocessing scripts (`Dataset_codes/`) and
 cross-validation split CSVs (`TrainIDs_*/`) are retained from the
 [dataset-release repository](https://github.com/Negin-Ghamsarian/Cataract-1K); the full
 upstream dataset description is preserved at

@@ -28,7 +28,7 @@ def main() -> None:
         "--sets", nargs="+", default=["segmentation", "phase"],
         choices=sorted(SYNAPSE_IDS),
     )
-    parser.add_argument("--dest", default="data")
+    parser.add_argument("--dest", default="data/cataract1k")
     args = parser.parse_args()
 
     try:

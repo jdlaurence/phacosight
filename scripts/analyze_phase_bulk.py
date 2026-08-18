@@ -81,7 +81,7 @@ def self_check(dino, seg, heads, log_trans, device, fps: float) -> float:
     """The stack must reproduce known accuracy on a labeled video before any
     bulk output is written (guards rate mismatches, feature-order bugs, ...)."""
     d = np.load(f"data/features/phase_dinov2l/{SELF_CHECK_CASE}.npz")
-    x, times, _, _ = video_features(Path("data/phase/videos") / f"{SELF_CHECK_CASE}.mp4",
+    x, times, _, _ = video_features(Path("data/cataract1k/phase/videos") / f"{SELF_CHECK_CASE}.mp4",
                                     dino, seg, device, fps)
     xt = x.unsqueeze(0).to(device)
     probs = torch.stack([torch.softmax(h(xt)[-1, 0], -1) for h in heads]).mean(0)
@@ -141,7 +141,7 @@ def video_features(video: Path, dino, seg, device, fps_out: float, batch: int = 
 @torch.no_grad()
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--videos", default="data/full")
+    parser.add_argument("--videos", default="data/cataract1k/full")
     parser.add_argument("--out", default="data/library/phase_timelines")
     parser.add_argument("--fps", type=float, default=1.0)
     parser.add_argument("--shard", default="0/1")
@@ -153,7 +153,7 @@ def main() -> None:
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                          cwd=Path(__file__).parents[1]).stdout.strip()
 
-    labeled = set(phase_cases("data/phase"))
+    labeled = set(phase_cases("data/cataract1k/phase"))
     videos = sorted(p for p in Path(args.videos).glob("case_*.mp4")
                     if p.stem not in labeled)
     i, n = map(int, args.shard.split("/"))

@@ -52,7 +52,7 @@ def main() -> None:
         for case, (lp, _) in logits.items():
             pred = viterbi(lp, log_trans)
             pred = np.array([MERGE.get(int(p), int(p)) for p in pred])
-            _, ann = case_paths("data/phase", case)
+            _, ann = case_paths("data/cataract1k/phase", case)
             for row in load_segments(ann).itertuples():
                 cls = MERGE.get(row.phase_id, row.phase_id)
                 s = int(row.start_sec * args.fps)

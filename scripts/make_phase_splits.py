@@ -48,7 +48,7 @@ def seg_test_fold_map() -> dict[str, int]:
 
 
 def main() -> None:
-    root = Path("data/phase")
+    root = Path("data/cataract1k/phase")
     out_dir = Path("TrainIDs_PhaseRecognition")
     out_dir.mkdir(exist_ok=True)
     rng = np.random.default_rng(SEED)

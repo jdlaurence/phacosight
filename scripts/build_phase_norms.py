@@ -36,8 +36,8 @@ def percentiles(vals: list[float]) -> dict:
 def main() -> None:
     # labeled cohort: GT per-video totals
     labeled = defaultdict(dict)
-    for c in phase_cases("data/phase"):
-        _, ann = case_paths("data/phase", c)
+    for c in phase_cases("data/cataract1k/phase"):
+        _, ann = case_paths("data/cataract1k/phase", c)
         for r in load_segments(ann).itertuples():
             p = PHASES[r.phase_id]
             labeled[p][c] = labeled[p].get(c, 0.0) + (r.end_sec - r.start_sec)

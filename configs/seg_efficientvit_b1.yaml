@@ -5,7 +5,7 @@ task: anatomy_instrument
 
 # Local directory containing the case_* folders
 # (…/semantic_segmentation_images_annotations/Images_and_Supervisely_Annotations)
-data_root: data/segmentation/Annotations/Images-and-Supervisely-Annotations
+data_root: data/cataract1k/segmentation/Annotations/Images-and-Supervisely-Annotations
 fold_csv_dir: TrainIDs_SemanticSegmentation_FiveFold/TrainIDs_Cataract_1k_Anatomy_Instruments
 fold_csv_prefix: Cat1k_anatomy_instrument
 num_folds: 5

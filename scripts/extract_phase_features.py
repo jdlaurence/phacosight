@@ -95,7 +95,7 @@ def embed(model, buf: list[torch.Tensor], device, patch_hw: tuple[int, int]):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--phase-root", default="data/phase")
+    parser.add_argument("--phase-root", default="data/cataract1k/phase")
     parser.add_argument("--out", default="data/features/phase_dinov2l")
     parser.add_argument("--fps", type=float, default=5.0)
     parser.add_argument("--size", default="518x392", help="WxH, multiples of 14")
