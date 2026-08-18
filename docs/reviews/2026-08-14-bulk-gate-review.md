@@ -4,7 +4,7 @@
 
 ## Verified
 
-- **Provenance clean**: all 334 timelines carry the fix commit SHA (893a10e); zero pre-fix outputs; the smoke-test-era cases were regenerated.
+- **Provenance clean**: all 334 timelines carry the fix commit SHA (10370aa); zero pre-fix outputs; the smoke-test-era cases were regenerated.
 - **Guards verified in code**: head-rate assertion and ≥0.85 self-check hard-exit before any write; reviewer replicated the self-check at 0.993.
 - **Stats reproduce exactly**: 5,219 action segments, 12.0% flagged, median confidence 0.948; 327/334 videos have all four anchors, 327/327 canonical order; idle fraction and segments-per-video match labeled GT distributions.
 - **Flags are a real error detector**: per-video low-confidence fraction correlates with held-out frame accuracy at **r = −0.94**.

@@ -24,7 +24,7 @@ None.
 
 ## 4. Big picture
 
-- **Trustworthy?** Yes. Provenance verified (git_sha 4dd462c, git_dirty false, seed 0; N1 `last.pt` present all folds, N2 honored). Instruments-CSV splits re-verified patient-disjoint. Convergence clean (|last − last-5-mean| ≤ 0.004; best−last ≤ 0.010). case5319_112.png drop immaterial.
+- **Trustworthy?** Yes. Provenance verified (git_sha 02fa372, git_dirty false, seed 0; N1 `last.pt` present all folds, N2 honored). Instruments-CSV splits re-verified patient-disjoint. Convergence clean (|last − last-5-mean| ≤ 0.004; best−last ≤ 0.010). case5319_112.png drop immaterial.
 - **Stage-3b on multiclass masks? Yes — and drop the separate binary fallback; the multiclass model contains it.** (a) Collapsing multiclass predictions to binary gives instrument IoU 0.8133 ≈ Stage-1 anatomy model's 0.8131 — the 7-way head cost nothing in geometry; (b) among pixels instrument in both truth and prediction, only 0.8% carry the wrong tool label. Architecture: geometry from the union of tool channels; identity by per-frame majority vote; phase priors as a consistency check (chiefly Katena at incision, where the model predicts nothing rather than a wrong tool).
 - **Knife dip / forceps floor?** Sample-size artifact and a single rare tool (C2, C3). No recipe change; report honestly.
 - **Next: Stage 2 (phase recognition) is the critical path.** Three of six product features are blocked only on it, and Stage-3b identity wants its phase priors. Carry the last-epoch/history/provenance discipline and per-class-support reporting into the phase model (idle vs rare phases will replay this exact review). First Stage-3b validation must run on video: temporal identity stability, not per-frame IoU.
