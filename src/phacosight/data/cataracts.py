@@ -1,9 +1,10 @@
 """CATARACTS-2020 phase ground truth → C1K 13-class taxonomy.
 
 Implements the pre-registered label map of ``docs/cataracts-harmonization-plan.md``
-(PI-reviewed 2026-08-18). Ambiguous entries carry their alternates in comments;
-the map freeze (sampled-clip review, R2 + idle rule R1) may amend them — any
-amendment must be recorded in the plan doc alongside the code change.
+(PI-reviewed 2026-08-18). **Map FROZEN 2026-08-18** after the sampled-clip review
+recorded in the plan doc: idle→idle (2–3.5% instrument-in-eye of 200 sampled, under
+the 10% rule), IDs 2/11 IGNORE confirmed, ID 12 amended to IGNORE, ID 18 merge to
+Tonifying/Antibiotics confirmed. Any further amendment requires a plan-doc update.
 
 GT format: per-video CSV ``Frame,Steps`` at native video frame rate, frames
 numbered from 1, label 0 = Idle, labels 1-18 index ``STEPS``.
@@ -56,8 +57,8 @@ STEP_TO_PHASE: dict[int, str | None] = {
     8: "Phacoemulsification",
     9: None,                       # Vitrectomy — complication management
     10: "Irrigation/Aspiration",
-    11: None,                      # Preparing Implant — provisional (alt: idle)
-    12: "Irrigation/Aspiration",   # Manual Aspiration — provisional (alt: Viscoelastic_Suction)
+    11: None,                      # Preparing Implant — off-eye closeups, OOD for C1K idle
+    12: None,                      # Manual Aspiration — only in the 2 vitrectomy videos; atypical cannula
     13: "Lens Implantation",
     14: "Lens positioning",
     15: "Viscoelastic_Suction",    # OVD Aspiration
@@ -96,3 +97,25 @@ def labels_at_times(steps: np.ndarray, video_fps: float, times: np.ndarray) -> n
     (frame index = time * fps, as in extract_phase_features)."""
     idx = np.clip(np.round(times * video_fps).astype(np.int64), 0, len(steps) - 1)
     return to_c1k(steps[idx])
+
+
+def steps_at_times(steps: np.ndarray, video_fps: float, times: np.ndarray) -> np.ndarray:
+    """Raw CATARACTS step IDs at ``times`` — cached alongside mapped labels so a map
+    amendment at freeze never requires re-extracting features."""
+    idx = np.clip(np.round(times * video_fps).astype(np.int64), 0, len(steps) - 1)
+    return steps[idx]
+
+
+def cataracts_cases(root: Path | str) -> list[tuple[str, Path, Path, str]]:
+    """(stem, video_path, gt_csv_path, split) for all 50 videos, sorted by stem.
+    Split names follow the GT directories (train/dev/test); 2020 dev/test keep 2017
+    ``test*`` filenames, so split identity comes from which GT dir holds the CSV."""
+    root = Path(root)
+    out = []
+    for split in ["train", "dev", "test"]:
+        for csv_path in sorted((root / "ground_truth/CATARACTS_2020" / f"{split}_gt").glob("*.csv")):
+            video = root / "videos/micro" / f"{csv_path.stem}.mp4"
+            if not video.exists():
+                raise FileNotFoundError(f"no video for GT {csv_path}")
+            out.append((csv_path.stem, video, csv_path, split))
+    return sorted(out)

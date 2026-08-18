@@ -60,7 +60,7 @@ composite corpus (see README Data section).*
 | 9 | Vitrectomy | 13,860 | **IGNORE** | Complication management; no C1K phase; sizable, do not mislabel |
 | 10 | Irrigation/Aspiration | 49,062 | `Irrigation/Aspiration` | High |
 | 11 | Preparing Implant | 12,222 | **IGNORE** (alt: `idle`) | Off-eye activity; C1K would likely call this idle — verify on sampled frames before choosing |
-| 12 | Manual Aspiration | 11,068 | `Irrigation/Aspiration` (alt: `Viscoelastic_Suction`) | Medium — inspect what is aspirated (cortex vs OVD) |
+| 12 | Manual Aspiration | 11,068 | **IGNORE** (amended at freeze) | Sampled clips: occurs *only* in the two vitrectomy videos (train19, test07), single manual cannula unlike the C1K I/A handpiece — complication-correlated, unsafe merge |
 | 13 | Implantation | 9,576 | `Lens Implantation` | High |
 | 14 | Positioning | 27,143 | `Lens positioning` | High |
 | 15 | OVD Aspiration | 31,098 | `Viscoelastic_Suction` | High |
@@ -73,9 +73,32 @@ C1K classes with **no CATARACTS source**: `Capsule Pulishing`, `Anterior_Chamber
 for regression (imbalance shift).
 
 **IGNORE mechanics:** ignored frames get `ignore_index` in the loss (never a wrong label,
-never dropped from the timeline — temporal models need contiguous sequences). With the
-table's primary choices (IDs 1, 2, 9, 11, 16, 17), six IGNORE steps total 45,226 train
-frames (9.1%); if ID 11 resolves to `idle` at map freeze, five steps, 33,004 frames (6.7%).
+never dropped from the timeline — temporal models need contiguous sequences). Frozen map:
+seven IGNORE steps (IDs 1, 2, 9, 11, 12, 16, 17) totaling 56,294 train frames (11.4%).
+
+## Map freeze (2026-08-18) — sampled-clip review results
+
+Review materials: seeded (0) contact sheets from **train+dev videos only** (test never
+sampled): 200 stratified idle frames + 12 frames per ambiguous step. Decisions:
+
+- **Idle rule (R1): idle → idle stands.** 4 clear instrument-in-eye frames + 3 borderline
+  of 200 (2–3.5%) — under the pre-registered 10% threshold. Incidental: rare black/
+  camera-pan frames and a keratoscope-like disc rested on the cornea between steps
+  (Brest practice) occur within idle spans; all consistent with "no active step".
+- **ID 2 (Implant Ejection) → IGNORE confirmed.** All sampled frames are from the first
+  ~3 minutes of surgery (84–184 s; only 3 train+dev videos have the step) showing fine
+  hooks at the limbus — visually incompatible with the `Lens Implantation` alternate;
+  mapping it there would have injected early-surgery frames into a late phase.
+- **ID 11 (Preparing Implant) → IGNORE confirmed.** Many frames are full-frame off-eye
+  closeups (gloved hands loading the IOL cartridge); C1K idle keeps the camera on the
+  eye, so the `idle` alternate would have polluted idle with out-of-distribution frames.
+- **ID 12 (Manual Aspiration) → IGNORE, amended from `Irrigation/Aspiration`.** Occurs
+  exclusively in the two vitrectomy (complication) videos, using a single manual cannula
+  visually unlike the C1K I/A handpiece. Complication-correlated appearance + atypical
+  instrument = unsafe merge; IGNORE-over-wrong-merge tiebreak applied.
+- **ID 18 (Wound Hydratation) → `Tonifying/Antibiotics` confirmed.** Sampled frames show
+  cannula-at-incision stromal hydration late in surgery with the IOL in place — the
+  expected match.
 
 ## Strategy options
 

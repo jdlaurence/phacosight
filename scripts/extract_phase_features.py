@@ -32,9 +32,11 @@ STD = torch.tensor([0.229, 0.224, 0.225])
 
 
 @torch.no_grad()
-def extract_case(model, case: str, phase_root: Path, fps: float, size: tuple[int, int],
-                 batch: int, device) -> dict:
-    video, ann = case_paths(phase_root, case)
+def extract_case(model, video: Path, labeler, fps: float, size: tuple[int, int],
+                 batch: int, device, crop_43: bool = False) -> dict:
+    """``labeler(times, vfps) -> dict`` supplies labels (+ any extra fields) for the
+    sampled times. ``crop_43`` center-crops 16:9 frames to 4:3 before the resize
+    (pre-registered geometry for CATARACTS; C1K is natively 4:3 and never cropped)."""
     cap = cv2.VideoCapture(str(video))
     vfps = cap.get(cv2.CAP_PROP_FPS)
     n_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -52,6 +54,11 @@ def extract_case(model, case: str, phase_root: Path, fps: float, size: tuple[int
         if idx >= next_pick:
             next_pick += stride
             times.append(idx / vfps)
+            if crop_43:
+                fh, fw = frame.shape[:2]
+                cw = (fh * 4) // 3
+                x0 = (fw - cw) // 2
+                frame = frame[:, x0:x0 + cw]
             rgb = cv2.cvtColor(cv2.resize(frame, size), cv2.COLOR_BGR2RGB)
             buf.append(torch.from_numpy(rgb))
             if len(buf) == batch:
@@ -66,15 +73,35 @@ def extract_case(model, case: str, phase_root: Path, fps: float, size: tuple[int
 
     features = torch.cat(feats).numpy().astype(np.float16)
     grid = torch.cat(grids).numpy().astype(np.float16)
-    # label each sampled time directly (robust to ragged stride)
-    segs = load_segments(ann)
     t = np.array(times)
-    labels = np.zeros(len(t), dtype=np.int64)
-    for row in segs.itertuples():
-        labels[(t >= row.start_sec) & (t < row.end_sec)] = row.phase_id
-    assert len(labels) == len(features) == len(grid)
-    return {"features": features, "grid": grid, "labels": labels,
+    data = {"features": features, "grid": grid,
             "times": t.astype(np.float32), "duration": duration, "video_fps": vfps}
+    data |= labeler(t, vfps)
+    assert len(data["labels"]) == len(features) == len(grid)
+    return data
+
+
+def c1k_labeler(ann: Path):
+    """Label each sampled time from the segment CSV (robust to ragged stride)."""
+    def label(t: np.ndarray, vfps: float) -> dict:
+        segs = load_segments(ann)
+        labels = np.zeros(len(t), dtype=np.int64)
+        for row in segs.itertuples():
+            labels[(t >= row.start_sec) & (t < row.end_sec)] = row.phase_id
+        return {"labels": labels}
+    return label
+
+
+def cataracts_labeler(gt_csv: Path, split: str):
+    """Mapped C1K labels + raw step IDs (so a map amendment never re-extracts)."""
+    from phacosight.data.cataracts import labels_at_times, load_steps, steps_at_times
+
+    def label(t: np.ndarray, vfps: float) -> dict:
+        steps = load_steps(gt_csv)
+        return {"labels": labels_at_times(steps, vfps, t),
+                "steps_raw": steps_at_times(steps, vfps, t),
+                "split": split, "dataset": "cataracts"}
+    return label
 
 
 @torch.no_grad()
@@ -95,7 +122,9 @@ def embed(model, buf: list[torch.Tensor], device, patch_hw: tuple[int, int]):
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", choices=["cataract1k", "cataracts"], default="cataract1k")
     parser.add_argument("--phase-root", default="data/cataract1k/phase")
+    parser.add_argument("--cataracts-root", default="data/cataracts")
     parser.add_argument("--out", default="data/features/phase_dinov2l")
     parser.add_argument("--fps", type=float, default=5.0)
     parser.add_argument("--size", default="518x392", help="WxH, multiples of 14")
@@ -113,15 +142,24 @@ def main() -> None:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    cases = phase_cases(args.phase_root)[i::n]
-    for case in cases:
+    if args.dataset == "cataracts":
+        from phacosight.data.cataracts import cataracts_cases
+        jobs = [(stem, video, cataracts_labeler(gt, split), True)
+                for stem, video, gt, split in cataracts_cases(args.cataracts_root)]
+    else:
+        jobs = []
+        for case in phase_cases(args.phase_root):
+            video, ann = case_paths(Path(args.phase_root), case)
+            jobs.append((case, video, c1k_labeler(ann), False))
+
+    for case, video, labeler, crop in jobs[i::n]:
         out = out_dir / f"{case}.npz"
         if out.exists():
             print(f"{case}: exists, skipping")
             continue
         t0 = time.time()
-        data = extract_case(model, case, Path(args.phase_root), args.fps, (w, h),
-                            args.batch, device)
+        data = extract_case(model, video, labeler, args.fps, (w, h),
+                            args.batch, device, crop_43=crop)
         try:
             sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                                  text=True, cwd=Path(__file__).parents[1]).stdout.strip()
