@@ -20,10 +20,10 @@ import pandas as pd
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.phase.decoding import transition_matrix, viterbi
-from cataract_video.phase.heads import HEADS
-from cataract_video.phase.metrics import PhaseMetrics, segments
-from cataract_video.phase.timeline import NUM_CLASSES, PHASES
+from phacosight.phase.decoding import transition_matrix, viterbi
+from phacosight.phase.heads import HEADS
+from phacosight.phase.metrics import PhaseMetrics, segments
+from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 
 def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = ()):

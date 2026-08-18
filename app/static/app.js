@@ -1,4 +1,4 @@
-/* CataractInsight SPA — no dependencies, hash routing. */
+/* PhacoSight SPA — no dependencies, hash routing. */
 "use strict";
 
 const PHASE_COLORS = {

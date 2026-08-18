@@ -28,17 +28,17 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from cataract_video.data.folds import load_fold
-from cataract_video.data.seg_dataset import (
+from phacosight.data.folds import load_fold
+from phacosight.data.seg_dataset import (
     CataractSegDataset,
     eval_transforms,
     instrument_oversample_weights,
     train_transforms,
 )
-from cataract_video.labels import TASKS, PUPIL_CLASS_NAME
-from cataract_video.losses import CrossEntropyLogDice
-from cataract_video.metrics import SegMetrics
-from cataract_video.models.segmentation import build_model
+from phacosight.labels import TASKS, PUPIL_CLASS_NAME
+from phacosight.losses import CrossEntropyLogDice
+from phacosight.metrics import SegMetrics
+from phacosight.models.segmentation import build_model
 
 
 def ddp_setup() -> tuple[int, int]:

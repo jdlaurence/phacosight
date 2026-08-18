@@ -24,8 +24,8 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cataract_video.phase.decoding import transition_matrix, viterbi
-from cataract_video.phase.timeline import NUM_CLASSES, PHASE_ID, PHASES, case_paths, load_segments
+from phacosight.phase.decoding import transition_matrix, viterbi
+from phacosight.phase.timeline import NUM_CLASSES, PHASE_ID, PHASES, case_paths, load_segments
 from eval_phase import fold_logits
 
 MERGE = {PHASE_ID["Anterior_Chamber Flushing"]: PHASE_ID["Viscoelastic"]}

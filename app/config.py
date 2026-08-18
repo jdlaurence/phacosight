@@ -1,7 +1,7 @@
 """Path/config resolution for the app.
 
 Everything hangs off DATA_ROOT (default <repo>/data, override with
-$CATARACT_DATA_ROOT). Every consumer tolerates missing pieces: a fresh clone
+$PHACOSIGHT_DATA_ROOT). Every consumer tolerates missing pieces: a fresh clone
 with no dataset still serves the UI, uploads, and any timelines present —
 degraded gracefully rather than crashing.
 """
@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-DATA_ROOT = Path(os.environ.get("CATARACT_DATA_ROOT", REPO / "data"))
+DATA_ROOT = Path(os.environ.get("PHACOSIGHT_DATA_ROOT", REPO / "data"))
 
 TIMELINE_DIR = DATA_ROOT / "library" / "phase_timelines"
 NORMS_PATH = DATA_ROOT / "library" / "phase_norms.json"

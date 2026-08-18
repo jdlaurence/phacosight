@@ -1,4 +1,4 @@
-# CataractInsight — physician web app
+# PhacoSight — physician web app
 
 Browse and review model-analyzed cataract surgeries, compare phase durations
 against cohort norms, search the phase-indexed library, track a physician's
@@ -7,7 +7,7 @@ progress over time, and upload new recordings for analysis.
 ## Run locally (single command)
 
 ```
-git clone <repo> && cd Cataract-1K
+git clone https://github.com/jdlaurence/phacosight.git && cd phacosight
 python -m venv .venv && .venv/bin/pip install -e ".[app]" torch torchvision transformers
 .venv/bin/python -m app          # → http://localhost:7860
 ```
@@ -15,7 +15,7 @@ python -m venv .venv && .venv/bin/pip install -e ".[app]" torch torchvision tran
 Hardware is auto-detected: with a CUDA GPU, uploaded-video analysis runs in
 about a minute per surgery; without one, browsing/search work identically and
 analysis falls back to CPU (slow but functional). `--host 0.0.0.0` exposes the
-app on the network; `--data-root` / `$CATARACT_DATA_ROOT` points at the data
+app on the network; `--data-root` / `$PHACOSIGHT_DATA_ROOT` points at the data
 directory (default `<repo>/data`).
 
 A bare clone (no dataset, no checkpoints) still serves the full UI and any

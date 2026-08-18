@@ -6,15 +6,15 @@ import pytest
 import torch
 from PIL import Image
 
-from cataract_video.data.seg_dataset import (
+from phacosight.data.seg_dataset import (
     CataractSegDataset,
     eval_transforms,
     instrument_oversample_weights,
     train_transforms,
 )
-from cataract_video.labels import ANATOMY_INSTRUMENT, INSTRUMENT_MULTICLASS, TASKS
-from cataract_video.losses import CrossEntropyLogDice
-from cataract_video.metrics import SegMetrics
+from phacosight.labels import ANATOMY_INSTRUMENT, INSTRUMENT_MULTICLASS, TASKS
+from phacosight.losses import CrossEntropyLogDice
+from phacosight.metrics import SegMetrics
 
 
 @pytest.fixture

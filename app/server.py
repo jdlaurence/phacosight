@@ -23,12 +23,12 @@ from .config import FULL_DIR, NORMS_PATH, PHASE_DIR, REPO, TIMELINE_DIR, UPLOAD_
 from .inference import InferenceService
 
 sys.path.insert(0, str(REPO / "src"))
-from cataract_video.phase.timeline import PHASES, case_paths, load_segments, phase_cases  # noqa: E402
+from phacosight.phase.timeline import PHASES, case_paths, load_segments, phase_cases  # noqa: E402
 
-CLIP_CACHE = Path(tempfile.gettempdir()) / "cataract_clips"
+CLIP_CACHE = Path(tempfile.gettempdir()) / "phacosight_clips"
 FLAG = {"conf": 0.7, "dis": 0.5}
 
-app = FastAPI(title="Cataract surgery analysis")
+app = FastAPI(title="PhacoSight")
 service = InferenceService()
 
 

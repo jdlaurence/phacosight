@@ -25,7 +25,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.phase.timeline import case_paths, load_segments, phase_cases
+from phacosight.phase.timeline import case_paths, load_segments, phase_cases
 
 MEAN = torch.tensor([0.485, 0.456, 0.406])
 STD = torch.tensor([0.229, 0.224, 0.225])

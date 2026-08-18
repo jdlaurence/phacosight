@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from cataract_video.data.folds import _relocate, fold_case_ids, load_fold
+from phacosight.data.folds import _relocate, fold_case_ids, load_fold
 
 REPO = Path(__file__).resolve().parents[1]
 FIVEFOLD = REPO / "TrainIDs_SemanticSegmentation_FiveFold" / "TrainIDs_Cataract_1k_Anatomy_Instruments"

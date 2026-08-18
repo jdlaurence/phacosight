@@ -1,6 +1,6 @@
 """Segmentation dataset over the rasterized mask PNGs + albumentations pipelines.
 
-Masks store the train ID as the pixel value (see ``cataract_video.labels``), so
+Masks store the train ID as the pixel value (see ``phacosight.labels``), so
 all mask resizing must be nearest-neighbor — albumentations does this for the
 ``mask`` target by default.
 """
@@ -62,7 +62,7 @@ class CataractSegDataset(Dataset):
 
 
 # Instrument train IDs per mask variant, keyed by the mask folder name
-# (mirrors cataract_video.labels; anatomy masks lump all tools into ID 4).
+# (mirrors phacosight.labels; anatomy masks lump all tools into ID 4).
 _INSTRUMENT_IDS = {
     "mask_anatomy_inst": (4,),
     "mask_instruments": (1,),

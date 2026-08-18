@@ -27,9 +27,9 @@ import pandas as pd
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.labels import ANATOMY_INSTRUMENT, INSTRUMENT_MULTICLASS
-from cataract_video.models.segmentation import build_model
-from cataract_video.phase.timeline import case_paths
+from phacosight.labels import ANATOMY_INSTRUMENT, INSTRUMENT_MULTICLASS
+from phacosight.models.segmentation import build_model
+from phacosight.phase.timeline import case_paths
 
 MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)

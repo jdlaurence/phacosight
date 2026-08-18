@@ -36,8 +36,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 from analyze_phase_bulk import (  # noqa: E402
     INFERENCE_FPS, TEMPERATURE, load_stack, self_check, video_features,
 )
-from cataract_video.phase.metrics import segments as label_segments  # noqa: E402
-from cataract_video.phase.timeline import PHASES  # noqa: E402
+from phacosight.phase.metrics import segments as label_segments  # noqa: E402
+from phacosight.phase.timeline import PHASES  # noqa: E402
 
 
 class InferenceService:
@@ -92,7 +92,7 @@ class InferenceService:
 
     @torch.no_grad()
     def _analyze(self, job: dict):
-        from cataract_video.phase.decoding import viterbi
+        from phacosight.phase.decoding import viterbi
 
         dino, seg, heads, device = self._stack
         video = Path(job["path"])

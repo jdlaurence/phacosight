@@ -29,12 +29,12 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.labels import ANATOMY_INSTRUMENT, INSTRUMENT_MULTICLASS
-from cataract_video.models.segmentation import build_model
-from cataract_video.phase.decoding import transition_matrix, viterbi
-from cataract_video.phase.heads import HEADS
-from cataract_video.phase.metrics import segments as label_segments
-from cataract_video.phase.timeline import NUM_CLASSES, PHASES, phase_cases
+from phacosight.labels import ANATOMY_INSTRUMENT, INSTRUMENT_MULTICLASS
+from phacosight.models.segmentation import build_model
+from phacosight.phase.decoding import transition_matrix, viterbi
+from phacosight.phase.heads import HEADS
+from phacosight.phase.metrics import segments as label_segments
+from phacosight.phase.timeline import NUM_CLASSES, PHASES, phase_cases
 
 MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)

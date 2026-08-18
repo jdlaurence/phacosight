@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 import torch
 
-from cataract_video.phase.heads import HEADS, mstcn_loss
-from cataract_video.phase.metrics import PhaseMetrics, edit_score, f1_at_k, segments
-from cataract_video.phase.timeline import NUM_CLASSES, PHASE_ID, frame_labels, load_segments
+from phacosight.phase.heads import HEADS, mstcn_loss
+from phacosight.phase.metrics import PhaseMetrics, edit_score, f1_at_k, segments
+from phacosight.phase.timeline import NUM_CLASSES, PHASE_ID, frame_labels, load_segments
 
 
 def test_frame_labels_rasterization(tmp_path):
@@ -74,7 +74,7 @@ def test_heads_shapes_and_loss(name):
 
 
 def test_decoding_smooth_and_viterbi():
-    from cataract_video.phase.decoding import mode_smooth, transition_matrix, viterbi
+    from phacosight.phase.decoding import mode_smooth, transition_matrix, viterbi
 
     noisy = np.array([1, 1, 2, 1, 1, 0, 0, 0, 3, 0, 0])
     sm = mode_smooth(noisy, window=3)

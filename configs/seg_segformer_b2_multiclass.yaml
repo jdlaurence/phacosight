@@ -1,7 +1,7 @@
 # Stage 1 follow-up: multiclass instruments (6 tool groups + background)
 # with the bake-off winner. Same recipe as the bake-off; the fold CSVs'
 # mask paths are remapped to mask_instruments_MultiClass by the task's
-# mask_dir (see cataract_video.data.folds).
+# mask_dir (see phacosight.data.folds).
 run_name: segformer_b2_instrument_multiclass
 model: segformer_b2
 task: instrument_multiclass

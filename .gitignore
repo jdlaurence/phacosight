@@ -3,7 +3,7 @@
 __pycache__/
 *.egg-info/
 .pytest_cache/
-# dataset dir/symlink at repo root only — NOT src/cataract_video/data
+# dataset dir/symlink at repo root only — NOT src/phacosight/data
 /data
 /data/
 runs/

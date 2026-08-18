@@ -21,9 +21,9 @@ import torch
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.phase.heads import HEADS, mstcn_loss
-from cataract_video.phase.metrics import PhaseMetrics
-from cataract_video.phase.timeline import NUM_CLASSES, PHASES
+from phacosight.phase.heads import HEADS, mstcn_loss
+from phacosight.phase.metrics import PhaseMetrics
+from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 
 def load_split(split_dir: Path, fold: int, name: str) -> list[str]:

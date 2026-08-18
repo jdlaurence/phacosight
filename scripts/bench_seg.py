@@ -15,7 +15,7 @@ from pathlib import Path
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.models.segmentation import build_model  # noqa: E402
+from phacosight.models.segmentation import build_model  # noqa: E402
 
 
 @torch.no_grad()

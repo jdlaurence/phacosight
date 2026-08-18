@@ -22,7 +22,7 @@ import numpy as np
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from cataract_video.phase.timeline import PHASES, case_paths, load_segments, phase_cases
+from phacosight.phase.timeline import PHASES, case_paths, load_segments, phase_cases
 
 ANCHORS = {"Incision", "Capsulorhexis", "Phacoemulsification", "Lens Implantation"}
 PCTS = (10, 25, 50, 75, 90)

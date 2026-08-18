@@ -9,9 +9,9 @@ earlier ones, same class titles), with three deliberate differences:
 - one pass writes all three variants (``mask_anatomy_inst``,
   ``mask_instruments``, ``mask_instruments_MultiClass``);
 - binary instrument masks store train ID 1 (not 255) per
-  ``cataract_video.labels.INSTRUMENT_BINARY``;
+  ``phacosight.labels.INSTRUMENT_BINARY``;
 - the multiclass grouping uses the Title Case names actually present in the
-  JSONs, mapped per ``cataract_video.labels.INSTRUMENT_MULTICLASS`` (the
+  JSONs, mapped per ``phacosight.labels.INSTRUMENT_MULTICLASS`` (the
   upstream "rev" script matched lowercase names absent from this export, and
   had a misaligned cartridge/incision-knife mapping).
 
