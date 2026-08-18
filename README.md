@@ -1,75 +1,124 @@
-Dataset release for "Cataract-1K: Cataract Surgery Dataset for Scene Segmentation, Phase Recognition, and Irregularity Detection"
-=================================================================================================================================
+# PhacoSight
 
-The [Cataract-1K](https://arxiv.org/pdf/2312.06295.pdf) dataset consists of 1000 videos of cataract surgeries conducted in the eye clinic of Klinikum Klagenfurt from 2021 to 2023. The videos are recorded using a MediLive Trio Eye device mounted on a ZEISS OPMI Vario microscope. The Cataract-1K dataset comprises videos conducted by surgeons with a cumulative count of completed surgeries ranging from 1,000 to over 40,000 procedures. On average, the videos have a duration of 7.12 minutes, with a standard duration of 200 seconds. In addition to this large-scale dataset, we provide surgical phase annotations for 56 regular videos and relevant anatomical plus instrument pixel-level annotations for 2256 frames out of 30 cataract surgery videos. Furthermore, we provide a small subset of surgeries with two major irregularities, including "pupil reaction" and "IOL rotation," to support further research on irregularity detection in cataract surgery. Except for the annotated videos and images, the remaining videos in the Cataract-1K dataset are encoded with a temporal resolution of 25 fps and a spatial resolution of $512 \times 324$.
+**Cataract surgery video analysis for resident physician education.**
 
-Phase recognition dataset
--------------------------
+PhacoSight processes recordings of cataract surgeries and turns them into structured,
+reviewable feedback for the operating resident: what happened, when, how long each step
+took, and how the surgery compares to a cohort of peers.
 
-A regular cataract surgery can include twelve action phases, including incision, viscoelastic, capsulorhexis, hydro-dissection, phacoemulsification, irrigation-aspiration, capsule polishing, lens implantation, lens positioning, viscoelastic-suction, anterior-chamber flushing, and tonifying/antibiotics. Besides, the idle phases refer to the time spans in the middle of a phase or between two phases when the surgeons mainly change the instruments and no instrument is visible inside the frames. 
+![PhacoSight pipeline architecture](docs/figures/pipeline_architecture.png)
 
+## What it does
 
-We provide a large annotated dataset to enable comprehensive studies on deep-learning-based phase recognition in cataract surgery videos. **Table 1** visualizes the phase annotations corresponding to 56 regular cataract surgery videos, with a spatial resolution of $1024 \times 768$, a temporal resolution of 30 fps, and an average duration of 6.45 minutes with a standard deviation of 2.04 minutes.  This dataset comprises patients with an average age of 75 years, ranging from 51 to 93 years, and a standard deviation of 8.69 years. The videos present in the phase recognition dataset correspond to surgeries executed by surgeons with an average experience of 8929 surgeries and a standard deviation of 6350 surgeries. Frame-level annotations for phase recognition are provided in CSV files, determining the first and the last frames for all action phases per video. The preprocessing codes to extract all action and idle phases from a video using the CSV files are provided in the GitHub repository of the paper. Furthermore, **Figure 1** demonstrates the total duration of the annotations corresponding to each phase from 56 videos.
+1. **Semantic segmentation** of anatomy (cornea, pupil, lens) and surgical instruments
+   per frame.
+2. **Phase recognition and timing** — the twelve action phases plus idle periods, with
+   per-phase durations and transitions.
+3. **Generated reports** summarizing the procedure: phase timeline, instrument usage,
+   notable events and irregularities (e.g. pupil contraction, IOL rotation).
+4. **Annotated review** — feedback and annotated frames for residents reviewing their
+   own surgeries, with per-prediction confidence flags.
+5. **Per-phase instrument-movement feedback** — kinematic metrics (path length,
+   velocity, smoothness, decentration) per surgical step, compared against cohort norms.
+6. **Phase-indexed video library** — analyzed surgeries are searchable by step
+   ("all main incisions") with matching clips retrieved and downloadable.
 
+Design docs, experiment write-ups, and PI reviews live in [`docs/`](docs/) — start with
+[`docs/experimentation-plan.md`](docs/experimentation-plan.md), then the stage results
+([`docs/stage1-segmentation-bakeoff.md`](docs/stage1-segmentation-bakeoff.md),
+[`docs/stage2-phase-results.md`](docs/stage2-phase-results.md)).
 
-**Table 1.** Visualizations of phase annotations for 56 normal cataract surgeries. The durations of the videos are different and normalized for better visualization.  
+## Repository layout
 
-<img src="./Dataset_webpage/imgs/Table1.png" alt=" Visualizations of phase annotations for 56 normal cataract surgeries. The durations of the videos are different and normalized for better visualization." width="1000">
+| Path | Contents |
+| --- | --- |
+| `src/phacosight/` | The Python package: labels, datasets, folds, models, phase pipeline |
+| `scripts/` | Entry points: training, evaluation, feature extraction, bulk analysis |
+| `configs/` | YAML configs for the segmentation and phase-recognition experiments |
+| `app/` | Physician-facing web app (FastAPI + vanilla JS) |
+| `tests/` | CPU smoke tests with synthetic data (no dataset download needed) |
+| `docs/` | Experimentation plan, results, reviews, figures, dataset description |
+| `Dataset_codes/`, `TrainIDs_*/` | Upstream Cataract-1K preprocessing scripts and committed cross-validation splits (see [Data](#data)) |
 
+## Setup
 
+```bash
+git clone https://github.com/jdlaurence/phacosight.git && cd phacosight
+python -m venv .venv
+.venv/bin/pip install -e ".[dev,app]"        # add [gpu] on a CUDA machine, [data] for downloads
+.venv/bin/python -m pytest tests/ -q         # smoke tests, no data required
+```
 
-<img src="./Dataset_webpage/imgs/pie_chart.png" alt=" Total duration of the annotated phases in the 56 annotated cataract surgery videos (in seconds)." width="600">
+Download the datasets (requires a [Synapse](https://www.synapse.org) account and
+`SYNAPSE_AUTH_TOKEN`):
 
-**Figure 1.** Total duration of the annotated phases in the 56 annotated cataract surgery videos (in seconds).
+```bash
+.venv/bin/python scripts/download_data.py --sets segmentation phase   # → data/
+```
 
+## Training
 
-Semantic segmentation dataset
------------------------------
-**Figure 2** visualizes pixel-level annotations for relevant anatomical objects and instruments.
+Segmentation (dual-GPU preferred; plain `python` works single-GPU/CPU):
 
+```bash
+.venv/bin/torchrun --standalone --nproc_per_node=2 scripts/train_seg.py \
+    --config configs/seg_segformer_b2.yaml --fold 0    # or --fold all
+```
 
-<img src="./Dataset_webpage/imgs/Figure3.png" alt=" Visualization of pixel-based annotations corresponding to relevant anatomical structures and instruments in cataract surgery and the challenges associated with different objects." width="1000">
+Phase recognition:
 
-**Figure 2.** Visualization of pixel-based annotations corresponding to relevant anatomical structures and instruments in cataract surgery and the challenges associated with different objects.
+```bash
+.venv/bin/python scripts/train_phase.py --config configs/phase_mstcnpp_tools_1fps_seed0.yaml
+```
 
-The semantic segmentation dataset includes frames from 30 regular cataract surgery videos with a spatial resolution of $1024 \times 768$ and an average duration of 6.52 minutes with a standard deviation of two minutes. Frame extraction is performed at the rate of one frame per five seconds. Subsequently, the frames featuring very harsh motion blur or out-of-scene iris are excluded from the dataset. We provide pixel-level annotations for three relevant anatomical structures, including iris, pupil, and intraocular lens, as well as nine instruments used in regular cataract surgeries including slit/incision knife, gauge, spatula, capsulorhexis cystome, phacoemulsifier tip, irrigation-aspiration, lens injector, capsulorhexis forceps, and katana forceps. All annotations are performed using polygons in the [Supervisely platform](https://supervisely.com/), and exported as JSON files. Within this dataset, the included individuals possess an average age of 74.5 years, spanning from 51 to 90 years, with a standard deviation of 8.43 years. Additionally, the videos contained in the semantic segmentation dataset depict surgeries conducted by surgeons whose collective experience averages 8033 surgeries, with a standard deviation of 3894 surgeries. The provided dataset enables a reliable study of segmentation performance for relevant anatomical structures, binary instruments, and multi-class instruments. Pixel-level annotations are provided in two formats: (1) Supervisely format, for which we provide Python codes for mask creation from JSON files, and (2) COCO format, which also provides bounding box annotations for all pixel-level annotated objects. The latter annotations can be used for object localization problems. The preprocessing codes to create training masks for "anatomy plus instrument segmentation", "binary instrument segmentation", and "multi-class instrument segmentation" are provided in the GitHub repository of the paper. We have formed five folds with patient-wise separation, meaning every fold consists of the frames corresponding to six distinct videos. **Table 2** compares the number of instances and their appearance percentage in the frames. Besides, **Table 3** lists the average number of pixels per frame corresponding to each label.
+Splits are patient-wise and committed under `TrainIDs_*/`; class-ID conventions are
+codified in `src/phacosight/labels.py` and mirror the upstream mask scripts exactly, so
+results remain comparable to the Cataract-1K paper's benchmarks.
 
+## Physician web app
 
-  
-**Table 2.** Number of instances and presence in the frames (% of total number of frames in each fold).
+```bash
+.venv/bin/python -m app        # or `phacosight` once installed
+```
 
-<img src="./Dataset_webpage/imgs/Table2.png" alt=" Number of instances and presence in the frames (% of the total number of frames in each fold)." width="1000">
+Then open http://localhost:7860 (from a workstation: `ssh -L 7860:localhost:7860 <host>`).
+Browse analyzed surgeries on an interactive timeline synced to video, compare per-phase
+durations against cohort percentiles, search the phase library, and upload new videos
+for GPU analysis. See [`app/README.md`](app/README.md).
 
+## Data
 
+PhacoSight is trained and evaluated on **[Cataract-1K](https://arxiv.org/pdf/2312.06295.pdf)**
+(Ghamsarian et al.): 1000 cataract surgery videos with phase annotations for 56 videos,
+pixel-level anatomy/instrument annotations for 2256 frames from 30 videos, and
+irregularity subsets. The dataset itself is **not** in this repository — it is
+downloaded from Synapse. The upstream preprocessing scripts (`Dataset_codes/`) and
+cross-validation split CSVs (`TrainIDs_*/`) are retained from the
+[dataset-release repository](https://github.com/Negin-Ghamsarian/Cataract-1K); the full
+upstream dataset description is preserved at
+[`docs/cataract-1k-dataset.md`](docs/cataract-1k-dataset.md).
 
-**Table 3.** Average pixels corresponding to different labels per frame.
+### Download
 
-<img src="./Dataset_webpage/imgs/Table3.png" alt="Average pixels corresponding to different labels per frame." width="1000">
+If you agree to the license conditions below, you are free to download the following:
 
+*   [Catatact-1k](https://www.synapse.org/#!Synapse:syn53404507) (89.9 GB)
+*   [Phase Recognition Set](https://www.synapse.org/#!Synapse:syn53395146) (3.87 GB)
+*   [Semantic Segmentation Set](https://www.synapse.org/#!Synapse:syn53395479) (4.74 GB)
+*   [Lens Irregularity Set](https://www.synapse.org/#!Synapse:syn53395131) (1.49 MB)
+*   [Pupil Reaction Set](https://www.synapse.org/#!Synapse:syn53395402) (3.29 MB)
+*   [Dataset Preparation Codes](https://github.com/Negin-Ghamsarian/Cataract-1K)
 
+### Citation
 
-Irregularity detection dataset
-------------------------------
+The Cataract-1K datasets are licensed under
+[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/legalcode);
+a reference must be made to the following publication when the dataset is used in any
+academic or research report:
 
-This dataset contains two small subsets of major intra-operative irregularities in cataract surgery, including pupil reaction and lens rotation.
-
-*   **Pupil Contraction:** During the phacoemulsification phase, where the occluded natural lens is corrupted and suctioned, the amount of light received by photoreceptors may suddenly increase. This increase in light reception affects the size of the pupil, usually resulting in slow (gradual) pupil contraction. In some cases, however, the pupil unexpectedly reacts to the lighting changes and becomes quickly contracted. These sudden reactions in pupil size can lead to serious intra-operative implications. Especially during the phacoemulsification phase where the instrument is deeply inserted inside the eye, sudden changes in pupil size may lead to injuries to the eye’s tender tissues. Besides, achieving precise IOL alignment or centration becomes challenging in cases where intraoperative pupil contraction (miosis) occurs. Particularly in multifocal IOLs, minor displacements or tilts, which might be negligible for conventional mono-focal IOLs, can significantly compromise visual performance. In the case of toric IOLs, precise alignment of the torus is crucial, as any deviation diminishes the IOL's effectiveness. Detection of unusual pupil reactions and severe pupil contractions during the surgery can highly contribute to the overall outcomes of cataract surgery and provide important insight for further post-operative investigations. Figure 4-top demonstrates an example of severe pupil contraction during cataract surgery.
-*   **IOL rotation:** Although aligned and centered upon surgery's conclusion, the IOL may rotate or dislocate following the surgery. Even slight deviations, such as minor misalignments of the torus in toric IOLs or the slight displacement and tilting of multifocal IOLs, can result in significant distortions in vision and leave patients dissatisfied. The sole way to address this postoperative complication is follow-up surgery, entailing added costs, heightened surgical risks, and patient discomfort. Identification of intra-operative indicators for predicting and preventing post-surgical IOL dislocation is an unmet clinical need. It is argued that intra-operative rotation of IOLs during cataract surgery is the leading cause of post-operative misalignments. Hence, automatic detection and measurement of intra-operative lens rotations can effectively contribute to preventing post-operative IOL dislocation. Figure 4-bottom represents fast clockwise rotations of IOL during unfolding, which occur in less than seven seconds.
-
-  
-
-<img src="./Dataset_webpage/imgs/Figure4.png" alt="Intra-operative irregularities in cataract surgery." width="1000">
-
-**Figure 3.** Intra-operative irregularities in cataract surgery.
-
-* * *
-
-Disclaimer
-----------
-A reference must be made to the following publication when this dataset is used in any academic and research reports:  
-  
-Ghamsarian, N., El-Shabrawi, Y., Nasirihaghighi, S. Putzgruber-Adamitsch, D., Zinkernagel, M., Wolf, S., Schoeffmann, K., Sznitman, R.: Cataract-1K: Cataract Surgery Dataset for Scene Segmentation, Phase Recognition, and Irregularity Detection (to appear)  
-  
+Ghamsarian, N., El-Shabrawi, Y., Nasirihaghighi, S., Putzgruber-Adamitsch, D.,
+Zinkernagel, M., Wolf, S., Schoeffmann, K., Sznitman, R.: Cataract-1K: Cataract Surgery
+Dataset for Scene Segmentation, Phase Recognition, and Irregularity Detection
 
 BibTeX:
 
@@ -87,34 +136,3 @@ BibTeX:
     
 }
 ```
-
-
-The datasets are licensed under Creative Commons 4.0 International (CC BY, [![Creative Commons License](https://licensebuttons.net/l/by/4.0/80x15.png)]([https://creativecommons.org/licenses/by-nc/4.0/](https://creativecommons.org/licenses/by/4.0/))).
-
-This license allows users of this dataset to copy, distribute, and transmit the work under the following conditions:
-
-*   Attribution: You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
-
-For further legal details, please read the complete [license terms](https://creativecommons.org/licenses/by/4.0/legalcode).
-
-* * *
-
-Download
---------
-
-If you agree to the above conditions, you are free to download the following:
-
-*   [Catatact-1k](https://www.synapse.org/#!Synapse:syn53404507) (89.9 GB)
-*   [Phase Recognition Set](https://www.synapse.org/#!Synapse:syn53395146) (3.87 GB)
-*   [Semantic Segmentation Set](https://www.synapse.org/#!Synapse:syn53395479) (4.74 GB)
-*   [Lens Irregularity Set](https://www.synapse.org/#!Synapse:syn53395131) (1.49 MB)
-*   [Pupil Reaction Set](https://www.synapse.org/#!Synapse:syn53395402) (3.29 MB)
-*   [Dataset Preparation Codes](https://github.com/Negin-Ghamsarian/Cataract-1K)
-
-* * *
-
-## Acknowledgments
-
-This work was supported in part by the Haag-Streit Foundation, Switzerland; and in part by the Austrian Science Fund (FWF) under Grant P 31486-N31 and P 32010-N38.
-
-

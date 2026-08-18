@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project goal
 
-This repo started as the Cataract-1K dataset-release repo (see below) and is being extended into a **cataract surgery video analysis model for resident physician education**. The planned system processes recordings of cataract surgeries and produces:
+**PhacoSight** is a **cataract surgery video analysis system for resident physician education** (this repo began as the Cataract-1K dataset-release repo — see below — and retains its preprocessing scripts and split CSVs). The system processes recordings of cataract surgeries and produces:
 
 1. **Semantic segmentation** of anatomy (cornea, pupil, lens) and surgical instruments per frame.
 2. **Phase recognition and timing** — identify the twelve action phases plus idle periods, and extract per-phase durations and transitions.
@@ -33,9 +33,9 @@ The experimentation plan (architectures, performance budget, experiment roadmap)
 
 ## The Cataract-1K dataset (upstream contents)
 
-Everything currently committed comes from the dataset-release repo for **Cataract-1K** (paper: https://arxiv.org/pdf/2312.06295.pdf), a cataract surgery video dataset for scene segmentation, phase recognition, and irregularity detection. It contains only preprocessing scripts, cross-validation split CSVs, and the README/webpage assets — **the actual dataset (videos, images, annotations) is not in this repo**; it is downloaded separately from Synapse (links in README.md).
+`Dataset_codes/` and the `TrainIDs_*` directories are retained from the dataset-release repo for **Cataract-1K** (paper: https://arxiv.org/pdf/2312.06295.pdf), a cataract surgery video dataset for scene segmentation, phase recognition, and irregularity detection; the full upstream dataset description is preserved at `docs/cataract-1k-dataset.md`. Those upstream materials are preprocessing scripts and cross-validation split CSVs only — **the actual dataset (videos, images, annotations) is not in this repo**; it is downloaded separately from Synapse (links in README.md).
 
-There is no build system, package manifest, or test suite. Scripts are standalone Python files run directly (`python <script>.py`) and depend on numpy, pandas, and Pillow; `frame_rate_changer.py` also shells out to `ffmpeg`.
+The upstream scripts have no build system or test suite. They are standalone Python files run directly (`python <script>.py`) and depend on numpy, pandas, and Pillow; `frame_rate_changer.py` also shells out to `ffmpeg`.
 
 ## How the scripts work
 
@@ -63,7 +63,7 @@ Both directories have parallel subfolders for the anatomy+instruments task and t
 
 ## Citation/license constraints
 
-Dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md). Keep the citation and download sections of README.md intact when editing it.
+Dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it.
 
 ## Physician web app
 
