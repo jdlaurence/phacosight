@@ -124,7 +124,20 @@ If you agree to the license conditions below, you are free to download the follo
 *   [Pupil Reaction Set](https://www.synapse.org/#!Synapse:syn53395402) (3.29 MB)
 *   [Dataset Preparation Codes](https://github.com/Negin-Ghamsarian/Cataract-1K)
 
-### Citation
+### CATARACTS terms and citation
+
+CATARACTS is distributed as **open access on IEEE DataPort** (free IEEE account; the
+dataset page publishes no explicit license text, so treat it as citation-required
+open access and nothing more permissive). Any use must cite:
+
+> Al Hajj, H., Lamard, M., Conze, P.-H., Cochener, B., Quellec, G., et al.:
+> CATARACTS: Challenge on automatic tool annotation for cataRACT surgery.
+> *Medical Image Analysis* 52 (2019): 24–41.
+>
+> H. Al Hajj, M. Lamard, P.-H. Conze, B. Cochener, G. Quellec, "CATARACTS",
+> IEEE Dataport, April 16, 2021, doi: 10.21227/ac97-8m18.
+
+### Cataract-1K citation
 
 The Cataract-1K datasets are licensed under
 [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/legalcode);

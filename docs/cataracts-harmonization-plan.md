@@ -181,6 +181,28 @@ never used for any selection. C1K folds/seeds unchanged from Stage 2.
   likeliest failure mode). E7-b-novit (exclude the vitrectomy-containing videos) runs if
   the probe fires.
 
+## Amendments after E7 results (2026-08-18, PI results review — APPROVE W/ CONCERNS)
+
+- **Adoption: E7-b adopted** (guardrail passed with net C1K gain; probe regression small,
+  well-characterized, and map surgery disproved as a remedy by v2). Strategy C rejected:
+  its premise (conflicting label semantics) is what v2 falsified.
+- **v3 pre-registered (authorized, NON-gating):** CATARACTS idle → IGNORE
+  (`aug_label_overrides: {0: null}`), 3 seeds × 4 folds, full eval cascade. **Decision
+  rule, committed before any v3 result exists:** v3 supersedes E7-b only if ALL of
+  (i) C1K Capsule Pulishing F1 recovers to within the base seed spread (≥ 0.9258),
+  (ii) CATARACTS-test macro-F1 within 0.7pp of E7-b (≥ 0.8732), and (iii) the C1K
+  guardrail passes as pre-registered. Any other outcome: E7-b stands and v3 is recorded
+  as a mechanism probe only.
+- **Ablation dispositions (formal amendment, not silent drops):** E7-b-notools
+  **waived** — its target (external idle-attraction from attenuated tool features) is
+  moot: the external endpoint passed by 20pp and the C1K-side regression cannot be
+  tool-feature-driven (in-domain features; polishing→I/A confusion decreased).
+  E7-b-novit **deferred behind v3** — runs only if v3 fails to explain the regression.
+- **Mechanism refinement (v2 evidence):** the Viscodilatation aliasing was real (v2
+  reverted the polishing→Viscoelastic cell 42→12) but removing those spans raised
+  idle's share of augmentation supervision and worsened net polishing (idle misses
+  165→208): **idle-attraction is the carrier** of the regression.
+
 ## Risks / open questions for PI
 
 - **R1:** Idle-definition mismatch (C1K: "no instrument visible"; CATARACTS: "no active

@@ -31,8 +31,11 @@ deployment-stack adoption yet** — pending v2, calibration re-fit, and PI resul
 - **Capsule Pulishing (C1K, absent-source class): 0.9273 → 0.9131 (−1.42pp)**, beyond
   the 0.7pp seed-spread threshold and consistent across seeds (base seeds 0.9258–0.9291).
   The other absent-source class, Anterior_Chamber Flushing, *improved* +2.45pp; all
-  merge-target classes improved. Product-scale context: the regression is ≈87
-  polishing-recall frames ≈ 87 s total across all 56 C1K videos at 1 fps.
+  merge-target classes improved. Product-scale context (corrected per PI results review
+  #1 — the confusion matrices are 3-seed sums): ≈29 polishing-recall frames **per
+  deployed model** ≈ 29 s total across all 56 C1K videos at 1 fps (~0.5 s/video),
+  flowing to idle — i.e. a slight polishing-duration under-report, dwarfed by the
+  2.07 s per-phase duration MAE.
 - **Confusion trace (new `eval_phase` confusion export):** the regression does **not**
   flow through I/A (polishing→I/A misses fell 9→4). True-polishing misses grew as
   **idle (110→165)** and **Viscoelastic (15→42)** — the bidirectional OVD-cannula ↔
@@ -51,9 +54,12 @@ deployment-stack adoption yet** — pending v2, calibration re-fit, and PI resul
 | E7-b (aug) | **0.9419** | 0.9131 | **0.880 / 87.9 / 84.0** |
 | v2 (Viscodilatation→IGNORE) | 0.9388 | **0.9055** | 0.808 / 74.8 / 72.2 |
 
-- Polishing did **not** recover under v2 — it worsened (0.9131 → 0.9055). The
-  span-label-aliasing mechanism the fallback targeted is **disproved**: the regression
-  is not carried by CATARACTS Viscodilatation labels.
+- Polishing did **not** recover under v2 — it worsened (0.9131 → 0.9055). Refinement
+  (PI results review #2): the Viscodilatation aliasing itself was *real* — v2 reverted
+  the targeted polishing→Viscoelastic confusion cell (42 → 12) — but removing those
+  12k frames raised idle's share of the augmentation supervision, and polishing→idle
+  misses grew further (165 → 208), net negative. **Idle-attraction is the carrier** of
+  the regression; span-label surgery on action phases cannot fix it.
 - v2 pays a large external price (−7.3pp macro-F1, −13.1 edit vs E7-b; still beats
   E7-0, 18/20 videos) and loses E7-b's C1K gain. **v2 is strictly dominated by E7-b.**
 - Remaining explanation for the polishing regression: the idle-attraction term
@@ -93,11 +99,37 @@ macro-F1/F1@50 conventions are now shared between both harnesses via `phase/metr
   (per-video paired fields, confusion matrices, provenance), guardrail eval JSONs
   regenerated with confusion export.
 
-## Pending before adoption
+## PI results review (APPROVE W/ CONCERNS) — adoption and follow-ups
 
-1. v2 fallback outcome (polishing recovery × external-endpoint retention).
-2. Calibration re-fit for whichever ensemble is proposed (temperature, ECE,
-   risk–coverage vs Stage-2 numbers).
-3. Conditional ablations if PI requires (notools/novit were probe-conditional;
-   the probe fired — disposition to be set at review).
-4. PI results review of this document.
+Full review: `docs/reviews/2026-08-18-e7-results-review.md`. Rulings: **E7-b adopted**;
+v3 (idle→IGNORE) authorized as a NON-gating mechanism probe under a pre-committed
+supersession rule (see plan amendments); notools waived / novit deferred (formal
+amendments, recorded in the plan); Strategy C rejected (falsified premise).
+
+**case_4750 inspection (PI #3, done):** the seed-consistent −10pp per-video macro-F1 is
+a small-class artifact on the corpus's known-pathological video (prior forensics:
+decentered, hemorrhage-dominated, instruments barely visible). Under E7-b its frame
+accuracy *improves* (0.569→0.593; Viscoelastic recall 0.40→0.67, Phaco 0.12→0.31), but
+Hydrodissection (38 frames) and Capsule Pulishing (15 frames) collapse to zero recall —
+two zeroed small classes dominate a per-video macro over present classes. ~50 frames
+total; the video remains correctly confidence-flagged at video level (the trustworthy
+unit per the Stage-2 forensics). No new mechanism: the same idle-attraction +
+polishing→Viscoelastic pattern on the hardest eye.
+
+**Monitoring plan (per PI #5):** per-class Capsule Pulishing F1 reported on every future
+eval; polishing-adjacent idle spans spot-checked in generated reports at the next bulk
+pass; case_4750 tracked as the canonical hard-case sentinel.
+
+## Pending before deployment-stack promotion
+
+1. v3 mechanism probe (running; NON-gating, pre-committed supersession rule in the
+   plan amendments).
+2. Calibration re-fit for the adopted ensemble (temperature, ECE, risk–coverage vs
+   Stage-2) — the app's confidence flags must not ship under the base temperature.
+3. Bulk-pass re-run + cohort-norms rebuild with the promoted ensemble (model-version
+   consistency: analyses must not be compared against old-model norms).
+4. Deployment self-check updated to the promoted checkpoints; grammar asset stays the
+   committed C1K-only `transition_matrix_1fps.npy` (no CATARACTS sequences — correct).
+5. ~~R5 license closure~~ done: CATARACTS citation block (Al Hajj et al. MedIA 2019 +
+   IEEE DataPort doi:10.21227/ac97-8m18) in README/CLAUDE.md.
+6. ~~case_4750 inspection~~ done (above); monitoring plan recorded.

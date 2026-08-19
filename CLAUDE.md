@@ -65,7 +65,7 @@ Both directories have parallel subfolders for the anatomy+instruments task and t
 
 ## Citation/license constraints
 
-PhacoSight code is Apache-2.0 (root `LICENSE` + `NOTICE`); the retained upstream release materials (`Dataset_codes/`, `TrainIDs_*/`) are MIT © Negin Ghamsarian (`Dataset_codes/LICENSE`). The Cataract-1K dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it. As additional datasets join the composite corpus, record their licenses/citation requirements here and in README.md the same way.
+PhacoSight code is Apache-2.0 (root `LICENSE` + `NOTICE`); the retained upstream release materials (`Dataset_codes/`, `TrainIDs_*/`) are MIT © Negin Ghamsarian (`Dataset_codes/LICENSE`). The Cataract-1K dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it. CATARACTS (second corpus component): IEEE DataPort open access, no explicit license text published — citation-required (Al Hajj et al., Medical Image Analysis 2019 + IEEE DataPort doi:10.21227/ac97-8m18; BibTeX-equivalent block in README.md). As additional datasets join the composite corpus, record their licenses/citation requirements here and in README.md the same way.
 
 ## Physician web app
 
