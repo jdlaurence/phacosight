@@ -53,9 +53,9 @@ def video_f1_at_50(pred: np.ndarray, true: np.ndarray) -> float:
     return float(100 * 2 * tp / denom) if denom else 0.0
 
 
-def load_heads(device) -> list:
+def load_heads(device, runs=TOOLS_RUNS) -> list:
     heads = []
-    for run in TOOLS_RUNS:
+    for run in runs:
         for fold in range(4):
             ckpt = torch.load(Path(run) / f"fold{fold}" / "val_best.pt",
                               map_location="cpu", weights_only=False)
@@ -72,6 +72,10 @@ def load_heads(device) -> list:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", default="test", choices=["train", "dev", "test"])
+    parser.add_argument("--runs", default=None,
+                        help="comma-separated head run dirs (default: deployment TOOLS_RUNS); "
+                             "e.g. the E7-b aug seeds for the E7-c arm")
+    parser.add_argument("--experiment", default="E7-0")
     parser.add_argument("--features", default="data/features/cataracts_dinov2l")
     parser.add_argument("--tools", default="data/features/cataracts_tools")
     parser.add_argument("--cataracts-root", default="data/cataracts")
@@ -81,10 +85,11 @@ def main() -> None:
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    heads = load_heads(device)
+    runs = args.runs.split(",") if args.runs else TOOLS_RUNS
+    heads = load_heads(device, runs)
     log_trans = np.load(args.trans)
     cases = [c for c in cataracts_cases(args.cataracts_root) if c[3] == args.split]
-    print(f"E7-0 zero-shot on CATARACTS {args.split} ({len(cases)} videos), "
+    print(f"{args.experiment} on CATARACTS {args.split} ({len(cases)} videos), "
           f"{len(heads)} heads, T={TEMPERATURE}")
 
     decodings = ("argmax", "mode", "viterbi")
@@ -120,11 +125,11 @@ def main() -> None:
     import subprocess
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                          cwd=Path(__file__).parents[1]).stdout.strip()
-    result = {"experiment": "E7-0", "split": args.split, "temperature": TEMPERATURE,
+    result = {"experiment": args.experiment, "split": args.split, "temperature": TEMPERATURE,
               "grammar": args.trans, "ignore_frames_spliced": True,
               "per_video_macro_f1_convention": "classes present in that video's spliced GT",
               "git_sha": sha, "features": args.features, "tools": args.tools,
-              "heads": TOOLS_RUNS, "decodings": {}, "per_video": per_video}
+              "heads": runs, "decodings": {}, "per_video": per_video}
     for name in decodings:
         m = agg[name].compute()
         m["confusion"] = agg[name].confusion.tolist()  # rows = true, cols = pred (PI #5)
