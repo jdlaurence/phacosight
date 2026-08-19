@@ -7,8 +7,8 @@ import pytest
 from phacosight.data.folds import _relocate, fold_case_ids, load_fold
 
 REPO = Path(__file__).resolve().parents[1]
-FIVEFOLD = REPO / "TrainIDs_SemanticSegmentation_FiveFold" / "TrainIDs_Cataract_1k_Anatomy_Instruments"
-FOURFOLD = REPO / "TrainIDs_Semantic Segmentation" / "TrainIDs_Cataract_1k_Instruments"
+FIVEFOLD = REPO / "upstream" / "TrainIDs_SemanticSegmentation_FiveFold" / "TrainIDs_Cataract_1k_Anatomy_Instruments"
+FOURFOLD = REPO / "upstream" / "TrainIDs_Semantic Segmentation" / "TrainIDs_Cataract_1k_Instruments"
 
 
 def test_relocate_cluster_absolute_path():

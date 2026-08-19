@@ -80,7 +80,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runs", nargs="+", required=True)
     parser.add_argument("--features", default="data/features/phase_dinov2l")
-    parser.add_argument("--split-dir", default="TrainIDs_PhaseRecognition")
+    parser.add_argument("--split-dir", default="splits/phase")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 

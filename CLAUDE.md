@@ -31,12 +31,13 @@ The experimentation plan (architectures, performance budget, experiment roadmap)
 - Download CATARACTS (IEEE DataPort open access, free account): paste presigned links into `data/cataracts/presigned_urls.txt`, then `python scripts/download_cataracts.py --extract` — see that script's docstring.
 - Class-ID conventions are codified in `src/phacosight/labels.py` — they mirror the upstream mask scripts exactly (note: multiclass instruments = 10 tools grouped into 6 classes).
 - `src/phacosight/data/folds.py` remaps the committed fold CSVs' cluster/relative paths to a local data root; `data_root` in configs points at the local `Images_and_Supervisely_Annotations` directory.
+- Committed splits: upstream Cataract-1K segmentation splits live under `upstream/TrainIDs_*/`; project-generated phase splits (plus `seg_checkpoint_map.csv`) live in `splits/phase/` (written by `scripts/make_phase_splits.py`).
 - Segmentation models are SegFormer-only (bake-off winner; losing candidates and their vendored code were removed in the post-E7 simplification — recover from git history if ever needed).
 - Shared phase-script I/O (stride-aware cache loading, ensemble rate checks) lives in `src/phacosight/phase/data_io.py` — never load cached features without applying the checkpoint's `frame_stride` (2026-08-14 incident class).
 
 ## The Cataract-1K dataset (upstream contents)
 
-`Dataset_codes/` and the `TrainIDs_*` directories are retained from the dataset-release repo for **Cataract-1K** (paper: https://arxiv.org/pdf/2312.06295.pdf), a cataract surgery video dataset for scene segmentation, phase recognition, and irregularity detection; the full upstream dataset description is preserved at `docs/cataract-1k-dataset.md`. Those upstream materials are preprocessing scripts and cross-validation split CSVs only — **the actual dataset (videos, images, annotations) is not in this repo**; it is downloaded separately from Synapse (links in README.md).
+`upstream/` holds the materials retained from the dataset-release repo for **Cataract-1K** (paper: https://arxiv.org/pdf/2312.06295.pdf), a cataract surgery video dataset for scene segmentation, phase recognition, and irregularity detection; the full upstream dataset description is preserved at `docs/cataract-1k-dataset.md`. Those upstream materials are preprocessing scripts and cross-validation split CSVs only — **the actual dataset (videos, images, annotations) is not in this repo**; it is downloaded separately from Synapse (links in README.md).
 
 The upstream scripts have no build system or test suite. They are standalone Python files run directly (`python <script>.py`) and depend on numpy, pandas, and Pillow; `frame_rate_changer.py` also shells out to `ffmpeg`.
 
@@ -44,13 +45,13 @@ The upstream scripts have no build system or test suite. They are standalone Pyt
 
 All scripts use **hardcoded relative paths** at the top of the file (e.g. `phase_recognition_annotations/`, `semantic_segmentation_images_annotations/Images_and_Supervisely_Annotations/`). They assume the downloaded dataset has been extracted into the working directory with those exact folder names. To run one, either place the data accordingly or edit the path variables — there are no CLI arguments.
 
-### `Dataset_codes/phase recognition dataset codes/`
+### `upstream/Dataset_codes/phase recognition dataset codes/`
 Turns per-video phase-annotation CSVs (start/end frame per phase, fps) into training clips:
 - `action_frame_extractor.py` / `idle_frame_extractor.py` — cut action-phase / idle segments out of the surgery videos using the annotation CSVs.
 - `frame_rate_changer.py` — re-encodes clips to 30 fps via ffmpeg.
 - `dataset_creation.py` — reorganizes extracted clips into a `Training_Dataset/` folder grouped by phase name.
 
-### `Dataset_codes/semantic segmentation dataset codes/`
+### `upstream/Dataset_codes/semantic segmentation dataset codes/`
 Two script families operating on Supervisely JSON polygon annotations (per case: `case_<id>/img/` and `case_<id>/ann/`):
 - `json_to_*mask*.py` — rasterize polygons into grayscale PNG masks where the pixel value is the class train-ID. Three task variants, each writing to its own mask folder inside each case: anatomy+instruments (`mask_anatomy_inst`: background=0, Cornea=1, Pupil=2, Lens=3, any instrument=4), binary instruments (`mask_instruments`), and multi-class instruments (`mask_instruments_MultiClass`). `json_to_visual_mask_AllClassess.py` makes color visualization masks instead of training masks. Masks are drawn in a fixed order (Cornea → Pupil → Lens → instruments) so later classes overwrite earlier ones; images are 1024×768.
 - `subdataset_generator_*.py` — build patient-wise cross-validation splits: 30 cases split into 5 folds of 6 cases, written as `<name>_<fold>_train.csv` / `_test.csv` with `imgs`/`masks` path columns.
@@ -59,14 +60,14 @@ The exact class-title strings from the Supervisely JSON matter: anatomy titles a
 
 ## Split CSVs (pre-generated, committed)
 
-- `TrainIDs_SemanticSegmentation_FiveFold/` — the five-fold splits described in the paper (`*_<fold>_train.csv` / `*_<fold>_test.csv`). Note: `imgs`/`masks` columns contain absolute paths from the authors' cluster and must be remapped to local paths before use.
-- `TrainIDs_Semantic Segmentation/` (note the space in the folder name) — four-fold train/validation/test splits (`*_train_fold<N>.csv` etc.) with relative paths.
+- `upstream/TrainIDs_SemanticSegmentation_FiveFold/` — the five-fold splits described in the paper (`*_<fold>_train.csv` / `*_<fold>_test.csv`). Note: `imgs`/`masks` columns contain absolute paths from the authors' cluster and must be remapped to local paths before use.
+- `upstream/TrainIDs_Semantic Segmentation/` (note the space in the folder name) — four-fold train/validation/test splits (`*_train_fold<N>.csv` etc.) with relative paths.
 
 Both directories have parallel subfolders for the anatomy+instruments task and the instruments-only task.
 
 ## Citation/license constraints
 
-PhacoSight code is Apache-2.0 (root `LICENSE` + `NOTICE`); the retained upstream release materials (`Dataset_codes/`, `TrainIDs_*/`) are MIT © Negin Ghamsarian (`Dataset_codes/LICENSE`). The Cataract-1K dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it. CATARACTS (second corpus component): IEEE DataPort open access, no explicit license text published — citation-required (Al Hajj et al., Medical Image Analysis 2019 + IEEE DataPort doi:10.21227/ac97-8m18; BibTeX-equivalent block in README.md). As additional datasets join the composite corpus, record their licenses/citation requirements here and in README.md the same way.
+PhacoSight code is Apache-2.0 (root `LICENSE` + `NOTICE`); the retained upstream release materials (`upstream/`: `Dataset_codes/`, `TrainIDs_*/`) are MIT © Negin Ghamsarian (`upstream/Dataset_codes/LICENSE`). The Cataract-1K dataset is CC BY 4.0 and any use requires citing the Cataract-1K publication (BibTeX in README.md and `docs/cataract-1k-dataset.md`). Keep the citation and download sections of README.md intact when editing it. CATARACTS (second corpus component): IEEE DataPort open access, no explicit license text published — citation-required (Al Hajj et al., Medical Image Analysis 2019 + IEEE DataPort doi:10.21227/ac97-8m18; BibTeX-equivalent block in README.md). As additional datasets join the composite corpus, record their licenses/citation requirements here and in README.md the same way.
 
 ## Physician web app
 

@@ -2,9 +2,9 @@
 
 The committed CSVs reference the dataset two ways:
 
-- ``TrainIDs_SemanticSegmentation_FiveFold``: absolute paths from the authors'
+- ``upstream/TrainIDs_SemanticSegmentation_FiveFold``: absolute paths from the authors'
   cluster (``/storage/homefs/.../case_5015/img/...``) or repo-relative paths.
-- ``TrainIDs_Semantic Segmentation``: repo-relative paths
+- ``upstream/TrainIDs_Semantic Segmentation``: repo-relative paths
   (``semantic_segmentation_images_annotations/Images_and_Supervisely_Annotations/case_.../...``).
 
 Either way the stable suffix is ``case_<id>/<subdir>/<file>.png``, so we cut at

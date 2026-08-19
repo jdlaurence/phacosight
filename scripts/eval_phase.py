@@ -70,7 +70,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", required=True)
     parser.add_argument("--features", default="data/features/phase_dinov2l")
-    parser.add_argument("--split-dir", default="TrainIDs_PhaseRecognition")
+    parser.add_argument("--split-dir", default="splits/phase")
     parser.add_argument("--num-folds", type=int, default=4)
     parser.add_argument("--fps", type=float, default=5.0)
     parser.add_argument("--mode-window", type=int, default=9)

@@ -7,7 +7,7 @@ model: segformer_b2
 task: instrument_multiclass
 
 data_root: data/cataract1k/segmentation/Annotations/Images-and-Supervisely-Annotations
-fold_csv_dir: TrainIDs_SemanticSegmentation_FiveFold/TrainIDs_Cataract_1k_Instruments
+fold_csv_dir: upstream/TrainIDs_SemanticSegmentation_FiveFold/TrainIDs_Cataract_1k_Instruments
 fold_csv_prefix: Cat1k_instrument
 num_folds: 5
 

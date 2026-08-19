@@ -3,7 +3,7 @@
 run_name: phase_mstcnpp_tools_1fps_aug_seed0
 head: mstcnpp
 features: data/features/phase_dinov2l
-split_dir: TrainIDs_PhaseRecognition
+split_dir: splits/phase
 num_folds: 4
 
 epochs: 60

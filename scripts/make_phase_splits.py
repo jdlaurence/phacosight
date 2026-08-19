@@ -13,7 +13,7 @@ Per PI pre-registration review (docs/reviews/, Stage 2):
   overlap cases -> the seg fold whose TEST set holds the case (never trained on
   it); clean cases -> seeded round-robin. One homogeneous rule, committed.
 
-Deterministic; writes TrainIDs_PhaseRecognition/.
+Deterministic; writes splits/phase/.
 """
 
 import sys
@@ -31,7 +31,7 @@ from phacosight.phase.timeline import (
 N_FOLDS = 4
 N_VAL = 6
 SEED = 0
-SEG_SPLIT_DIR = Path("TrainIDs_SemanticSegmentation_FiveFold/TrainIDs_Cataract_1k_Anatomy_Instruments")
+SEG_SPLIT_DIR = Path("upstream/TrainIDs_SemanticSegmentation_FiveFold/TrainIDs_Cataract_1k_Anatomy_Instruments")
 ACF = "Anterior_Chamber Flushing"
 
 
@@ -49,7 +49,7 @@ def seg_test_fold_map() -> dict[str, int]:
 
 def main() -> None:
     root = Path("data/cataract1k/phase")
-    out_dir = Path("TrainIDs_PhaseRecognition")
+    out_dir = Path("splits/phase")
     out_dir.mkdir(exist_ok=True)
     rng = np.random.default_rng(SEED)
 

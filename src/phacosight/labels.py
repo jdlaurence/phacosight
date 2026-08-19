@@ -1,7 +1,7 @@
 """Class-ID conventions for Cataract-1K segmentation tasks.
 
 These mirror the mask-generation scripts in
-``Dataset_codes/semantic segmentation dataset codes/`` exactly — mask PNGs
+``upstream/Dataset_codes/semantic segmentation dataset codes/`` exactly — mask PNGs
 store the train ID as the pixel value, so these tables are the single source
 of truth for interpreting them.
 

@@ -38,7 +38,7 @@ Design docs, experiment write-ups, and PI reviews live in [`docs/`](docs/) — s
 | `app/` | Physician-facing web app (FastAPI + vanilla JS) |
 | `tests/` | CPU smoke tests with synthetic data (no dataset download needed) |
 | `docs/` | Experimentation plan, results, reviews, figures, dataset description |
-| `Dataset_codes/`, `TrainIDs_*/` | Upstream Cataract-1K preprocessing scripts and committed cross-validation splits (see [Data](#data)) |
+| `upstream/` | Upstream Cataract-1K preprocessing scripts and committed cross-validation splits (see [Data](#data)) |
 
 ## Setup
 
@@ -71,15 +71,15 @@ Phase recognition:
 .venv/bin/python scripts/train_phase.py --config configs/phase_mstcnpp_tools_1fps_seed0.yaml
 ```
 
-Splits are patient-wise and committed under `TrainIDs_*/`; class-ID conventions are
+Splits are patient-wise and committed under `upstream/TrainIDs_*/` (segmentation) and `splits/phase/` (phase); class-ID conventions are
 codified in `src/phacosight/labels.py` and mirror the upstream mask scripts exactly, so
 results remain comparable to the Cataract-1K paper's benchmarks.
 
 ## License
 
 PhacoSight is licensed under the [Apache License 2.0](LICENSE) (see also [NOTICE](NOTICE)).
-The Cataract-1K release materials retained in this repository (`Dataset_codes/`, the
-`TrainIDs_*/` splits) carry the upstream [MIT license](Dataset_codes/LICENSE)
+The Cataract-1K release materials retained in this repository (everything under `upstream/`: `Dataset_codes/`, the
+`TrainIDs_*/` splits) carry the upstream [MIT license](upstream/Dataset_codes/LICENSE)
 (© 2024 Negin Ghamsarian), and the Cataract-1K dataset itself is distributed under
 CC BY 4.0 with a citation requirement — see [Data](#data).
 
@@ -107,8 +107,8 @@ roadmap, starting with **[CATARACTS](https://ieee-dataport.org/open-access/catar
 open access on IEEE DataPort, downloaded via `scripts/download_cataracts.py`). The
 datasets themselves are **not** in this repository — Cataract-1K is downloaded from
 Synapse. Raw datasets live under `data/<dataset>/`; derived artifacts under
-`data/features/` and `data/library/`. The upstream preprocessing scripts (`Dataset_codes/`) and
-cross-validation split CSVs (`TrainIDs_*/`) are retained from the
+`data/features/` and `data/library/`. The upstream preprocessing scripts (`upstream/Dataset_codes/`) and
+cross-validation split CSVs (`upstream/TrainIDs_*/`) are retained from the
 [dataset-release repository](https://github.com/Negin-Ghamsarian/Cataract-1K); the full
 upstream dataset description is preserved at
 [`docs/cataract-1k-dataset.md`](docs/cataract-1k-dataset.md).

@@ -2,7 +2,7 @@
 """Cache per-frame tool/anatomy presence features from the Stage-1 segmentation
 models for the 56 phase videos (Stage 2 E3).
 
-Checkpoint per video comes from TrainIDs_PhaseRecognition/seg_checkpoint_map.csv
+Checkpoint per video comes from splits/phase/seg_checkpoint_map.csv
 (PI review B1/B2): overlap cases use the seg fold that held them out; clean
 cases a pinned round-robin fold. Anatomy = best.pt (those runs predate last.pt;
 best-last gap <=0.005, caveat documented), multiclass = last.pt.
@@ -72,7 +72,7 @@ def main() -> None:
     parser.add_argument("--cataracts-root", default="data/cataracts")
     parser.add_argument("--dino-cache", default="data/features/phase_dinov2l")
     parser.add_argument("--out", default="data/features/phase_tools")
-    parser.add_argument("--map", default="TrainIDs_PhaseRecognition/seg_checkpoint_map.csv")
+    parser.add_argument("--map", default="splits/phase/seg_checkpoint_map.csv")
     parser.add_argument("--size", type=int, default=512)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--shard", default="0/1")

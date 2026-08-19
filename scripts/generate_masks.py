@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Rasterize Supervisely JSON polygons into training-mask PNGs (all 3 variants).
 
-Faithful reimplementation of the upstream ``Dataset_codes/semantic segmentation
+Faithful reimplementation of the upstream ``upstream/Dataset_codes/semantic segmentation
 dataset codes/json_to_network_mask_*.py`` scripts (same 1024x768 canvas, same
 draw order Cornea -> Pupil -> Lens -> instruments so later classes overwrite
 earlier ones, same class titles), with three deliberate differences:

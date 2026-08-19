@@ -7,7 +7,7 @@ Stage-3b priors.*
 
 **Revisions from PI review (all applied before caching):**
 - **B1/B2:** overlap is **27** phase∩seg cases (29 clean; seg-only: 5180/5299/5325). One
-  homogeneous tool-feature rule, committed as `TrainIDs_PhaseRecognition/seg_checkpoint_map.csv`:
+  homogeneous tool-feature rule, committed as `splits/phase/seg_checkpoint_map.csv`:
   overlap → the seg fold whose *test* split holds the case; clean → seeded round-robin.
   Anatomy features use `best.pt` (its runs predate `last.pt`; measured best−last ≤0.005,
   caveat recorded); multiclass uses `last.pt`.

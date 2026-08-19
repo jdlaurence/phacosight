@@ -32,7 +32,7 @@ A 7-min 30 fps video = ~12,600 frames. No task needs all of them:
 
 - Phase labels (56 videos) and segmentation labels (30 videos, 2,256 frames) are **disjoint video subsets** → joint multi-task training needs alternating-batch machinery for modest gains. **Decision: separate task heads/models; optionally share a self-supervised-pretrained backbone later.**
 - The ~944 unannotated videos are 512×324 @ 25 fps (annotated ones are 1024×768) — still usable for SSL pretraining, pseudo-labeling, and building phase-duration norm distributions for reports.
-- Use the repo's committed patient-wise 5-fold splits (`TrainIDs_SemanticSegmentation_FiveFold/`, paths need remapping from the authors' cluster) for comparability with published benchmarks.
+- Use the repo's committed patient-wise 5-fold splits (`upstream/TrainIDs_SemanticSegmentation_FiveFold/`, paths need remapping from the authors' cluster) for comparability with published benchmarks.
 - Known accuracy anchors on Cataract-1K: pupil Dice ≈ 94–98 (easy), instruments Dice ≈ 77–83 (bottleneck); best published mIoU 0.88 (CatSeg 2026, but only ~6–8 fps); the paper's own phase benchmark: ResNet50+BiGRU best.
 
 ## Candidate architectures
@@ -136,7 +136,7 @@ Deterministic `metrics.json` → Jinja2/HTML(→PDF) renderer with matplotlib ch
 
 **Stage 0 — Scaffolding (prerequisite):**
 - Download Segmentation + Phase Recognition + irregularity sets from Synapse (links in README).
-- New `src/` package + `configs/`; generate masks with the repo's existing `Dataset_codes/semantic segmentation dataset codes/` scripts; remap fold-CSV paths to local (small path-mapping utility).
+- New `src/` package + `configs/`; generate masks with the repo's existing `upstream/Dataset_codes/semantic segmentation dataset codes/` scripts; remap fold-CSV paths to local (small path-mapping utility).
 - Decode benchmark: torchcodec NVDEC vs CPU on one video; lock the decode layer.
 
 **Stage 1 — Segmentation bake-off (first priority):**
