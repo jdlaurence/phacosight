@@ -122,8 +122,15 @@ pass; case_4750 tracked as the canonical hard-case sentinel.
 
 ## Pending before deployment-stack promotion
 
-1. v3 mechanism probe (running; NON-gating, pre-committed supersession rule in the
-   plan amendments).
+1. ~~v3 mechanism probe~~ done — **no supersession; E7-b stands** (rule applied
+   mechanically). v3 (CATARACTS idle→IGNORE): C1K polishing recovered to 0.9207
+   (needed ≥0.9258; base 0.9273) — **confirming idle-attraction as the carrier**, with
+   a −0.66pp residual near seed spread — but the external endpoint collapsed
+   (macro-F1 0.664, edit 43.4; CATARACTS idle F1 0.012): masking a center's idle
+   supervision makes its timelines undecodable. Mechanism explained → the deferred
+   novit ablation is waived (its trigger condition — v3 failing to explain — not met).
+   Final accounting: E7-b's −1.42pp polishing cost is the price of learning CATARACTS
+   idle, which is also what bought the +20.2pp external gain; monitored per plan.
 2. Calibration re-fit for the adopted ensemble (temperature, ECE, risk–coverage vs
    Stage-2) — the app's confidence flags must not ship under the base temperature.
 3. Bulk-pass re-run + cohort-norms rebuild with the promoted ensemble (model-version

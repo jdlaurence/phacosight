@@ -41,9 +41,9 @@ STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 # Heads must be trained at the inference rate: MS-TCN++ receptive fields are
 # defined in samples, so 5fps-trained heads silently collapse at 1fps (caught
 # by the labeled-video self-check below; see the 2026-08-14 incident note).
-TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_seed0", "runs/phase_mstcnpp_tools_1fps_seed1",
-              "runs/phase_mstcnpp_tools_1fps_seed2"]
-TEMPERATURE = 1.04  # mean of val-fit fold temperatures (confidence.json)
+TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_aug_seed0", "runs/phase_mstcnpp_tools_1fps_aug_seed1",
+              "runs/phase_mstcnpp_tools_1fps_aug_seed2"]  # E7-b, adopted 2026-08-18 (PI review)
+TEMPERATURE = 1.016  # mean of val-fit fold temperatures (runs/e7b_confidence.json)
 SELF_CHECK_CASE = "case_4687"  # labeled video the stack must score >=0.85 acc on
 INFERENCE_FPS = 1.0
 

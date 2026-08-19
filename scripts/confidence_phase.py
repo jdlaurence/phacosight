@@ -26,29 +26,43 @@ from phacosight.phase.metrics import PhaseMetrics, segments
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 
-def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = ()):
+def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = (), stride: int = 1):
     d = np.load(feat_dir / f"{case}.npz")
     feats = [d["features"].astype(np.float32)]
     for e in extra_dirs:
         feats.append(np.load(Path(e) / f"{case}.npz")["features"].astype(np.float32))
-    return np.concatenate(feats, axis=1), d["labels"].astype(np.int64)
+    # stride from the checkpoints: 1 fps heads fed 5 fps sequences silently collapse
+    return np.concatenate(feats, axis=1)[::stride], d["labels"].astype(np.int64)[::stride]
+
+
+def run_stride(run_dirs) -> tuple[int, float]:
+    """(frame_stride, effective fps) shared by all runs — mixed-rate ensembles are a bug."""
+    seen = set()
+    for rd in run_dirs:
+        cfg = torch.load(Path(rd) / "fold0" / "val_best.pt",
+                         map_location="cpu", weights_only=False)["config"]
+        seen.add((int(cfg.get("frame_stride", 1)), float(cfg.get("features_fps", 5.0))))
+    assert len(seen) == 1, f"runs disagree on stride/fps: {seen}"
+    stride, ffps = seen.pop()
+    return stride, ffps / stride
 
 
 @torch.no_grad()
-def seed_logits(run_dirs, fold, cases, feat_dir, device):
+def seed_logits(run_dirs, fold, cases, feat_dir, device, stride=1):
     """{case: [n_seeds, T, C] logits}. Extra-feature spec comes from each checkpoint."""
     out = {c: [] for c in cases}
     for rd in run_dirs:
-        ckpt = torch.load(Path(rd) / f"fold{fold}" / "val_best.pt", weights_only=False)
+        ckpt = torch.load(Path(rd) / f"fold{fold}" / "val_best.pt",
+                          map_location="cpu", weights_only=False)
         cfg = ckpt["config"]
         extra = [Path(p) for p in cfg.get("extra_features", [])]
-        x0, _ = load_case(feat_dir, cases[0], extra)
+        x0, _ = load_case(feat_dir, cases[0], extra, stride)
         model = HEADS[cfg["head"]](x0.shape[1], NUM_CLASSES,
                                    **cfg.get("head_kwargs", {})).to(device)
         model.load_state_dict(ckpt["model"])
         model.eval()
         for c in cases:
-            x, _ = load_case(feat_dir, c, extra)
+            x, _ = load_case(feat_dir, c, extra, stride)
             out[c].append(model(torch.from_numpy(x).unsqueeze(0).to(device))[-1, 0].cpu())
     return {c: torch.stack(v) for c, v in out.items()}
 
@@ -93,27 +107,29 @@ def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     feat_dir, split_dir = Path(args.features), Path(args.split_dir)
 
+    stride, eff_fps = run_stride(args.runs)
+    print(f"runs at frame_stride {stride} -> {eff_fps} fps")
     frame_conf, frame_correct, frame_conf_raw = [], [], []
     frame_disagree, frame_err = [], []
     seg_rows = []
-    agg = PhaseMetrics(NUM_CLASSES, PHASES, fps=5.0)
+    agg = PhaseMetrics(NUM_CLASSES, PHASES, fps=eff_fps)
 
     for fold in range(4):
         splits = {s: pd.read_csv(split_dir / f"fold{fold}_{s}.csv")["case"].tolist()
                   for s in ("train", "val", "test")}
-        val_logits = seed_logits(args.runs, fold, splits["val"], feat_dir, device)
-        val_labels = [load_case(feat_dir, c)[1] for c in splits["val"]]
+        val_logits = seed_logits(args.runs, fold, splits["val"], feat_dir, device, stride)
+        val_labels = [load_case(feat_dir, c, stride=stride)[1] for c in splits["val"]]
         T = fit_temperature(list(val_logits.values()), val_labels, device)
 
-        train_labels = [load_case(feat_dir, c)[1] for c in splits["train"]]
+        train_labels = [load_case(feat_dir, c, stride=stride)[1] for c in splits["train"]]
         log_trans = transition_matrix(train_labels, NUM_CLASSES)
 
-        test_logits = seed_logits(args.runs, fold, splits["test"], feat_dir, device)
+        test_logits = seed_logits(args.runs, fold, splits["test"], feat_dir, device, stride)
         for c in splits["test"]:
             sl = test_logits[c]  # [S, T, C]
             probs_raw = torch.softmax(sl, -1).mean(0).numpy()
             probs = torch.softmax(torch.log(torch.from_numpy(probs_raw) + 1e-12) / T, -1).numpy()
-            y = load_case(feat_dir, c)[1]
+            y = load_case(feat_dir, c, stride=stride)[1]
             pred = viterbi(np.log(probs + 1e-12), log_trans)
             agg.update(pred, y)
             p_pred = probs[np.arange(len(pred)), pred]
@@ -127,7 +143,7 @@ def main() -> None:
             for cls, s, e in segments(pred):
                 match = ((y[s:e] == cls).mean())
                 seg_rows.append({"case": c, "fold": fold, "cls": int(cls),
-                                 "len_s": (e - s) / 5.0,
+                                 "len_s": (e - s) / eff_fps,
                                  "conf": float(p_pred[s:e].mean()),
                                  "disagree": float(dis[s:e].mean()),
                                  "purity": float(match)})
