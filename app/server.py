@@ -24,12 +24,15 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import FULL_DIR, NORMS_PATH, PHASE_DIR, REPO, TIMELINE_DIR, UPLOAD_DIR
 from .inference import InferenceService
+from .overlay import OVERLAY_COLORS, OverlayService, render_overlay
 
 sys.path.insert(0, str(REPO / "src"))
 from phacosight.phase.timeline import PHASES, case_paths, load_segments, phase_cases  # noqa: E402
 
 CLIP_CACHE = Path(tempfile.gettempdir()) / "phacosight_clips"
 CLIP_CACHE_MAX_BYTES = 2 * 2**30
+OVERLAY_CACHE = Path(tempfile.gettempdir()) / "phacosight_overlays"
+OVERLAY_CACHE_MAX_BYTES = 2**30
 FLAG = {"conf": 0.7, "dis": 0.5}
 CASE_RE = re.compile(r"[A-Za-z0-9._-]{1,80}")
 
@@ -189,6 +192,7 @@ def rebuild_norms():
 
 
 service = InferenceService(on_done=rebuild_norms)
+overlay_service = OverlayService()
 
 
 def video_metrics(d: dict) -> dict:
@@ -331,8 +335,7 @@ def progress(physician: str):
     return {"physician": physician, "videos": rows, "cohort": cohort}
 
 
-@app.get("/api/frame")
-def frame(case: str, t: float, h: int = 240):
+def read_frame(case: str, t: float):
     cap = cv2.VideoCapture(str(video_path(case)))
     fps = cap.get(cv2.CAP_PROP_FPS)
     if not cap.isOpened() or fps <= 0:
@@ -343,11 +346,46 @@ def frame(case: str, t: float, h: int = 240):
     cap.release()
     if not ok:
         raise HTTPException(404, "frame out of range")
+    return img
+
+
+@app.get("/api/frame")
+def frame(case: str, t: float, h: int = 240):
+    img = read_frame(case, t)
     scale = h / img.shape[0]
     img = cv2.resize(img, (int(img.shape[1] * scale), h))
     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 82])
     return Response(buf.tobytes(), media_type="image/jpeg",
                     headers={"Cache-Control": "max-age=86400"})
+
+
+@app.get("/api/overlay/legend")
+def overlay_legend():
+    return {"available": overlay_service.available(),
+            "classes": [{"name": n, "color": c}
+                        for n, c in OVERLAY_COLORS.items() if c]}
+
+
+@app.get("/api/overlay")
+def overlay(case: str, t: float, h: int = 480):
+    if not overlay_service.available():
+        raise HTTPException(503, "segmentation checkpoint not present")
+    safe_case(case)
+    OVERLAY_CACHE.mkdir(exist_ok=True)
+    out = OVERLAY_CACHE / f"{case}_{t:.1f}_{h}.jpg"
+    if not out.exists():
+        img = read_frame(case, t)
+        mask, img = overlay_service.mask(img)
+        img = render_overlay(img, mask)
+        scale = h / img.shape[0]
+        img = cv2.resize(img, (int(img.shape[1] * scale), h))
+        ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not ok:
+            raise HTTPException(500, "encode failed")
+        out.write_bytes(buf.tobytes())
+        evict_cache(OVERLAY_CACHE, OVERLAY_CACHE_MAX_BYTES)
+    return FileResponse(out, media_type="image/jpeg",
+                        headers={"Cache-Control": "max-age=86400"})
 
 
 @app.get("/api/search")

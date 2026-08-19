@@ -169,3 +169,50 @@ def test_norms_rebuild_picks_up_new_timeline(app_env):
     assert server.norms.dist["Incision"] == [15.0, 30.0]
     rows = client.get("/api/videos").json()
     assert any(r["case"] == "case_new" for r in rows)
+
+
+def test_overlay_legend_and_endpoint_guards(app_env):
+    client, server, _ = app_env
+    lg = client.get("/api/overlay/legend").json()
+    assert isinstance(lg["available"], bool)
+    assert {c["name"] for c in lg["classes"]} == {"cornea", "pupil", "lens", "instrument"}
+    assert all(c["color"].startswith("#") for c in lg["classes"])
+    r = client.get("/api/overlay", params={"case": "case_clean", "t": 1.0})
+    # checkpoint present: 404 (no video file); bare clone: 503 (no checkpoint)
+    assert r.status_code == (404 if server.overlay_service.available() else 503)
+    assert client.get("/api/overlay",
+                      params={"case": "../x", "t": 0}).status_code in (400, 503)
+
+
+def test_render_overlay_blend():
+    import numpy as np
+    from app.overlay import ALPHA, OVERLAY_COLORS, render_overlay
+
+    frame = np.full((60, 80, 3), 100, dtype=np.uint8)
+    mask = np.zeros((60, 80), dtype=np.uint8)
+    mask[10:30, 10:30] = 2  # pupil
+    out = render_overlay(frame, mask)
+    assert out.shape == frame.shape
+    assert (out[40:, 40:] == 100).all()            # background untouched
+    assert not (out[15:25, 15:25] == 100).all()    # masked interior blended
+    b, g, r = out[20, 20]
+    hexc = OVERLAY_COLORS["pupil"]
+    exp = [round(100 * (1 - ALPHA) + int(hexc[i:i + 2], 16) * ALPHA) for i in (5, 3, 1)]
+    assert abs(int(b) - exp[0]) <= 1 and abs(int(g) - exp[1]) <= 1 and abs(int(r) - exp[2]) <= 1
+
+
+def test_overlay_model_integration():
+    """Runs the real deployed checkpoint on a synthetic frame (skipped on a
+    bare clone). Validates load + preprocessing + mask shape, incl. the 16:9
+    center-crop path."""
+    import numpy as np
+    from app.overlay import CKPT, OverlayService
+
+    if not CKPT.exists():
+        pytest.skip("segmentation checkpoint not present")
+    svc = OverlayService()
+    frame = np.random.default_rng(0).integers(0, 255, (768, 1366, 3), dtype=np.uint8)
+    mask, cropped = svc.mask(frame)
+    assert cropped.shape == (768, 1024, 3)         # 16:9 → 4:3 center crop
+    assert mask.shape == cropped.shape[:2]
+    assert mask.max() <= 4

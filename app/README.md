@@ -1,8 +1,11 @@
 # PhacoSight — physician web app
 
 Browse and review model-analyzed cataract surgeries, compare phase durations
-against cohort norms, search the phase-indexed library, track a physician's
-progress over time, and upload new recordings for analysis.
+against cohort norms, explore each phase's cohort profile with example clips,
+track a physician's progress over time, and upload new recordings for analysis
+(with delete/re-analyze and a live queue). On the case page, an AI anatomy
+overlay (SegFormer: cornea/pupil/lens/instrument) renders on paused frames and
+as per-phase keyframes — on demand via `/api/overlay`, no precompute.
 
 ## Run locally (single command)
 

@@ -41,6 +41,15 @@ async function getVideos() {
 const invalidateVideos = () => { videosCache = null; };
 let lastListOrder = null;  // case ids in the surgeries table's current filter order
 
+let overlayInfo = null;    // {available, classes: [{name, color}]}
+async function getOverlayInfo() {
+  if (!overlayInfo) {
+    try { overlayInfo = await api("/api/overlay/legend"); }
+    catch { overlayInfo = {available: false, classes: []}; }
+  }
+  return overlayInfo;
+}
+
 /* ---------------- router ---------------- */
 window.addEventListener("hashchange", route);
 window.addEventListener("load", route);
@@ -243,14 +252,52 @@ async function renderDetail(caseId, params) {
   /* left: player + timelines */
   const left = el("div", "card player-card");
   let vid = null;
+  const ov = await getOverlayInfo();
+  const canOverlay = ov.available && d.has_video !== false;
   if (d.has_video === false) {
     left.append(el("div", "no-video",
       "No video file available for this case — timelines and metrics only."));
   } else {
+    const wrap = el("div", "player-wrap");
     vid = document.createElement("video");
     vid.controls = true; vid.preload = "metadata";
     vid.src = `/api/stream/${encodeURIComponent(caseId)}`;
-    left.append(vid);
+    wrap.append(vid);
+    left.append(wrap);
+    if (canOverlay) {
+      const ovImg = el("img", "ov-img"); ovImg.hidden = true; ovImg.alt = "";
+      const ovSpin = el("div", "ov-spin", "rendering overlay…"); ovSpin.hidden = true;
+      wrap.append(ovImg, ovSpin);
+      const row = el("div", "ov-row");
+      const toggle = el("label", "ov-toggle",
+        `<input type="checkbox"> AI anatomy overlay <span class='sub' style='margin:0'>(paused frames)</span>`);
+      const box = toggle.querySelector("input");
+      row.append(toggle);
+      const lg = el("span", "legend ov-legend");
+      for (const c of ov.classes)
+        lg.append(el("span", "", `<i style="background:${c.color}"></i>${esc(c.name)}`));
+      row.append(lg);
+      left.append(row);
+      const updateOv = async () => {
+        if (!box.checked || !vid.paused) { ovImg.hidden = true; ovSpin.hidden = true; return; }
+        ovSpin.hidden = false;
+        const t = vid.currentTime.toFixed(1);
+        const src = `/api/overlay?case=${encodeURIComponent(caseId)}&t=${t}&h=480`;
+        try {
+          await new Promise((res, rej) => {
+            const im = new Image(); im.onload = res; im.onerror = rej; im.src = src;
+          });
+          if (box.checked && vid.paused && vid.currentTime.toFixed(1) === t) {
+            ovImg.src = src; ovImg.hidden = false;
+          }
+        } catch { /* overlay is best-effort */ }
+        ovSpin.hidden = true;
+      };
+      box.addEventListener("change", updateOv);
+      vid.addEventListener("pause", updateOv);
+      vid.addEventListener("seeked", () => { if (vid.paused) updateOv(); });
+      vid.addEventListener("play", () => { ovImg.hidden = true; ovSpin.hidden = true; });
+    }
   }
   const now = el("div", "now-playing", "&nbsp;");
   left.append(now);
@@ -271,6 +318,31 @@ async function renderDetail(caseId, params) {
   for (const p of d.phase_names.filter(p => present.has(p)))
     legend.append(el("span", "", `<i style="background:${PHASE_COLORS[p]}"></i>${nice(p)}`));
   left.append(legend);
+
+  /* AI-annotated keyframe per phase (midpoint of its longest confident segment) */
+  if (canOverlay && segs && d.metrics) {
+    const kfs = [];
+    for (const p of d.metrics.phases) {
+      const cand = segs.filter(s => s.phase === p.phase && !isFlagged(s));
+      if (!cand.length) continue;
+      const best = cand.reduce((a, b) => b.end_s - b.start_s > a.end_s - a.start_s ? b : a);
+      kfs.push({phase: p.phase, t: (best.start_s + best.end_s) / 2});
+    }
+    if (kfs.length) {
+      left.append(el("div", "tl-label", "AI-annotated keyframes — click to jump"));
+      const strip = el("div", "keyframes");
+      for (const k of kfs) {
+        const c = el("div", "kf");
+        c.innerHTML = `<img loading="lazy" style="border-color:${PHASE_COLORS[k.phase]}"
+            src="/api/overlay?case=${encodeURIComponent(caseId)}&t=${k.t.toFixed(1)}&h=180"
+            alt="${esc(nice(k.phase))}">
+          <span>${nice(k.phase)}</span>`;
+        if (vid) c.onclick = () => { vid.currentTime = k.t; vid.pause(); };
+        strip.append(c);
+      }
+      left.append(strip);
+    }
+  }
   grid.append(left);
 
   /* deep-link seek (#/video/<case>?t=<sec>) */
