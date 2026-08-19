@@ -1,4 +1,6 @@
-/* PhacoSight SPA — no dependencies, hash routing. */
+/* PhacoSight SPA — no dependencies, hash routing.
+   Routes: #/surgeries (default) · #/video/<case>?t=<s> · #/phases/<phase>
+           #/physicians/<name> · #/upload   (old #/videos #/library #/progress alias) */
 "use strict";
 
 const PHASE_COLORS = {
@@ -9,8 +11,10 @@ const PHASE_COLORS = {
   "Lens positioning": "#9085e9", "Viscoelastic_Suction": "#e87ba4",
   "Anterior_Chamber Flushing": "#c2569b", "Tonifying/Antibiotics": "#008300",
 };
-const nice = p => p === "Capsule Pulishing" ? "Capsule Polishing" : p.replace("_", " ");
+const nice = p => p === "Capsule Pulishing" ? "Capsule Polishing" : p.replaceAll("_", " ");
 const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -26,27 +30,59 @@ const view = document.getElementById("view");
 const tooltip = document.getElementById("tooltip");
 const isFlagged = s => s.phase !== "idle" && (s.confidence < 0.7 || s.disagreement > 0.5);
 
+let videosCache = null, videosCacheAt = 0;
+async function getVideos() {
+  if (!videosCache || Date.now() - videosCacheAt > 60_000) {
+    videosCache = await api("/api/videos");
+    videosCacheAt = Date.now();
+  }
+  return videosCache;
+}
+const invalidateVideos = () => { videosCache = null; };
+let lastListOrder = null;  // case ids in the surgeries table's current filter order
+
 /* ---------------- router ---------------- */
 window.addEventListener("hashchange", route);
 window.addEventListener("load", route);
-function route() {
-  const [_, page, arg] = location.hash.split("/");
+const NAV_OF = {surgeries: "surgeries", videos: "surgeries", video: "surgeries",
+                phases: "phases", library: "phases",
+                physicians: "physicians", progress: "physicians", upload: "upload"};
+
+async function route() {
+  const [_, page, rawArg] = location.hash.split("/");
+  const [arg, query] = (rawArg || "").split("?");
+  const params = new URLSearchParams(query || "");
   document.querySelectorAll("nav a").forEach(a =>
-    a.classList.toggle("active", a.dataset.nav === (page || "videos")));
+    a.classList.toggle("active", a.dataset.nav === (NAV_OF[page] || "surgeries")));
   tooltip.hidden = true;
-  if (page === "video" && arg) return renderDetail(decodeURIComponent(arg));
-  if (page === "library") return renderLibrary();
-  if (page === "progress") return renderProgress();
-  if (page === "upload") return renderUpload();
-  return renderList();
+  try {
+    if (page === "video" && arg) return await renderDetail(decodeURIComponent(arg), params);
+    if (page === "phases" || page === "library")
+      return await renderPhases(arg ? decodeURIComponent(arg) : null);
+    if (page === "physicians" || page === "progress")
+      return await renderPhysicians(arg ? decodeURIComponent(arg) : null);
+    if (page === "upload") return renderUpload();
+    return await renderList();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function showError(err) {
+  view.innerHTML = "";
+  const c = el("div", "card error-card");
+  c.append(el("h2", "", "Something went wrong"));
+  c.append(el("p", "sub", esc(err && err.message || err)));
+  const b = el("button", "", "Retry");
+  b.onclick = () => { invalidateVideos(); route(); };
+  c.append(b);
+  view.append(c);
 }
 
 /* ---------------- surgeries list ---------------- */
-let videosCache = null;
 async function renderList() {
   view.innerHTML = "<p class='empty'>Loading surgeries…</p>";
-  videosCache = videosCache || await api("/api/videos");
-  const vids = videosCache;
+  const vids = await getVideos();
   const n = vids.length;
   const flagged = vids.filter(v => v.flag_fraction > 0.25).length;
   const uploaded = vids.filter(v => v.source === "uploaded").length;
@@ -71,7 +107,7 @@ async function renderList() {
     <option value="uploaded">uploaded</option>`);
   const docSel = el("select", "", `<option value="">all physicians</option>` +
     [...new Set(vids.map(v => v.physician).filter(Boolean))].sort()
-      .map(d => `<option>${d}</option>`).join(""));
+      .map(d => `<option>${esc(d)}</option>`).join(""));
   const flagSel = el("select", "", `<option value="">any status</option>
     <option value="review">needs review</option><option value="clean">clean</option>`);
   bar.append(search, srcSel, docSel, flagSel);
@@ -84,6 +120,7 @@ async function renderList() {
   const tbody = el("tbody");
   table.append(tbody); card.append(table); view.append(card);
 
+  let showAll = false;
   const draw = () => {
     const q = search.value.toLowerCase();
     tbody.innerHTML = "";
@@ -92,24 +129,34 @@ async function renderList() {
       (!srcSel.value || v.source === srcSel.value) &&
       (!docSel.value || v.physician === docSel.value) &&
       (!flagSel.value || (flagSel.value === "review") === (v.flag_fraction > 0.25)));
-    for (const v of rows.slice(0, 400)) {
+    lastListOrder = rows.map(v => v.case);
+    const shown = showAll ? rows : rows.slice(0, 400);
+    for (const v of shown) {
       const tr = el("tr");
       const status = v.flag_fraction > 0.25
         ? "<span class='chip warn'>review</span>" : "<span class='chip ok'>clean</span>";
       const src = {library: "archive", labeled: "annotated", uploaded: "uploaded"}[v.source];
-      tr.innerHTML = `<td><b>${v.case}</b><br><span class='chip neutral'>${src}</span></td>
-        <td><div class='minitl' data-case='${v.case}'></div></td>
+      tr.innerHTML = `<td><b>${esc(v.case)}</b><br><span class='chip neutral'>${src}</span></td>
+        <td><div class='minitl' data-case='${esc(v.case)}'></div></td>
         <td class='num'>${fmtT(v.duration_s)}</td>
-        <td>${v.physician || "<span class='sub'>—</span>"}</td>
-        <td class='num'>${v.surgery_date || "<span class='sub'>—</span>"}</td>
+        <td>${v.physician ? esc(v.physician) : "<span class='sub'>—</span>"}</td>
+        <td class='num'>${v.surgery_date ? esc(v.surgery_date) : "<span class='sub'>—</span>"}</td>
         <td class='num'>${(v.flag_fraction * 100).toFixed(0)}%</td><td>${status}</td>`;
-      tr.onclick = () => location.hash = `#/video/${v.case}`;
+      tr.onclick = () => location.hash = `#/video/${encodeURIComponent(v.case)}`;
+      tbody.append(tr);
+    }
+    if (!showAll && rows.length > shown.length) {
+      const tr = el("tr", "show-all");
+      tr.innerHTML = `<td colspan='7'>Showing ${shown.length} of ${rows.length} — show all</td>`;
+      tr.onclick = () => { showAll = true; draw(); };
       tbody.append(tr);
     }
     lazyMiniTimelines();
     if (!rows.length) tbody.innerHTML = "<tr><td colspan='7' class='empty'>No matches.</td></tr>";
   };
-  [search, srcSel, docSel, flagSel].forEach(x => x.addEventListener("input", draw));
+  [search, srcSel, docSel, flagSel].forEach(x => x.addEventListener("input", () => {
+    showAll = false; draw();
+  }));
   draw();
 }
 
@@ -121,7 +168,7 @@ function lazyMiniTimelines() {
       io.unobserve(en.target);
       const c = en.target.dataset.case;
       try {
-        miniCache[c] = miniCache[c] || (async () => (await api(`/api/videos/${c}`)))();
+        miniCache[c] = miniCache[c] || (async () => (await api(`/api/videos/${encodeURIComponent(c)}`)))();
         const d = await miniCache[c];
         const segs = d.segments.length ? d.segments : (d.ground_truth || []);
         const total = d.duration_s;
@@ -135,17 +182,32 @@ function lazyMiniTimelines() {
 }
 
 /* ---------------- detail ---------------- */
-async function renderDetail(caseId) {
+async function renderDetail(caseId, params) {
   view.innerHTML = "<p class='empty'>Loading analysis…</p>";
-  const d = await api(`/api/videos/${caseId}`);
+  const d = await api(`/api/videos/${encodeURIComponent(caseId)}`);
   view.innerHTML = "";
-  const head = el("div");
-  head.append(el("h1", "", caseId));
+
+  /* header with prev/next case navigation */
+  const head = el("div", "detail-head");
+  const titleWrap = el("div");
+  titleWrap.append(el("h1", "", esc(caseId)));
   const sub = d.metrics
     ? `Automated timeline · ${d.metrics.n_segments} segments · median confidence
        ${d.metrics.median_confidence.toFixed(2)} ${d.ground_truth ? "· expert annotations available" : ""}`
     : "Expert annotations only (not model-analyzed)";
-  head.append(el("p", "sub", sub));
+  titleWrap.append(el("p", "sub", sub));
+  head.append(titleWrap);
+  try {
+    const order = (lastListOrder && lastListOrder.includes(caseId))
+      ? lastListOrder : (await getVideos()).map(v => v.case).sort();
+    const i = order.indexOf(caseId);
+    const nav = el("div", "case-nav");
+    if (i > 0) nav.append(Object.assign(el("a", "ghost-link",
+      `← ${esc(order[i - 1])}`), {href: `#/video/${encodeURIComponent(order[i - 1])}`}));
+    if (i >= 0 && i < order.length - 1) nav.append(Object.assign(el("a", "ghost-link",
+      `${esc(order[i + 1])} →`), {href: `#/video/${encodeURIComponent(order[i + 1])}`}));
+    head.append(nav);
+  } catch { /* nav is optional */ }
   view.append(head);
 
   const grid = el("div", "detail-grid");
@@ -153,17 +215,23 @@ async function renderDetail(caseId) {
 
   /* left: player + timelines */
   const left = el("div", "card player-card");
-  const vid = document.createElement("video");
-  vid.controls = true; vid.preload = "metadata";
-  vid.src = `/api/stream/${caseId}`;
-  left.append(vid);
+  let vid = null;
+  if (d.has_video === false) {
+    left.append(el("div", "no-video",
+      "No video file available for this case — timelines and metrics only."));
+  } else {
+    vid = document.createElement("video");
+    vid.controls = true; vid.preload = "metadata";
+    vid.src = `/api/stream/${encodeURIComponent(caseId)}`;
+    left.append(vid);
+  }
   const now = el("div", "now-playing", "&nbsp;");
   left.append(now);
   const tlWrap = el("div", "tl-wrap");
   left.append(tlWrap);
   const segs = d.segments.length ? d.segments : null;
   if (segs) {
-    tlWrap.append(el("div", "tl-label", "model timeline — click to jump"));
+    tlWrap.append(el("div", "tl-label", vid ? "model timeline — click to jump" : "model timeline"));
     tlWrap.append(timelineSVG(segs, d.duration_s, vid, true));
   }
   if (d.ground_truth) {
@@ -178,9 +246,19 @@ async function renderDetail(caseId) {
   left.append(legend);
   grid.append(left);
 
+  /* deep-link seek (#/video/<case>?t=<sec>) */
+  const t0 = parseFloat(params && params.get("t"));
+  if (vid && Number.isFinite(t0)) {
+    vid.addEventListener("loadedmetadata", () => { vid.currentTime = t0; }, {once: true});
+    const hit = tlWrap.querySelector(
+      `rect.seg[data-start]`) && [...tlWrap.querySelectorAll("rect.seg[data-start]")]
+      .find(r => +r.dataset.start <= t0 && t0 < +r.dataset.end);
+    if (hit) { hit.classList.add("flash"); setTimeout(() => hit.classList.remove("flash"), 2500); }
+  }
+
   /* playhead sync */
-  vid.addEventListener("timeupdate", () => {
-    document.querySelectorAll(".playhead").forEach(ph =>
+  if (vid) vid.addEventListener("timeupdate", () => {
+    tlWrap.querySelectorAll(".playhead").forEach(ph =>
       ph.setAttribute("x", `${(100 * vid.currentTime / d.duration_s).toFixed(3)}%`));
     const cur = (segs || []).find(s => vid.currentTime >= s.start_s && vid.currentTime < s.end_s);
     now.innerHTML = cur
@@ -198,12 +276,12 @@ async function renderDetail(caseId) {
     const panel = el("div", "card panel");
     panel.append(el("h2", "", "Phase durations vs cohort"));
     panel.append(el("p", "sub", `Marker = this surgery; shaded band = cohort interquartile
-      range (n≈${m.phases[0]?.n_cohort ?? "–"}).`));
+      range (n≈${m.phases[0]?.n_cohort ?? "–"}). Phase names link to the cohort profile.`));
     for (const p of m.phases) panel.append(phaseRow(p));
     const idle = el("div", "ph-row");
     idle.innerHTML = `<span class='ph-name'><i style="background:${PHASE_COLORS.idle}"></i>idle
       (between steps)</span><span></span>
-      <span class='ph-val num'>${p0(m.idle_s)}<small>±6 s uncertainty</small></span>`;
+      <span class='ph-val num'>${p0(m.idle_s)}</span>`;
     panel.append(idle);
     side.append(panel);
 
@@ -217,7 +295,7 @@ async function renderDetail(caseId) {
         const s = d.segments[i];
         const li = el("li", "", `<b>${nice(s.phase)}</b> ${fmtT(s.start_s)}–${fmtT(s.end_s)}
           · conf ${s.confidence.toFixed(2)}`);
-        li.onclick = () => { vid.currentTime = s.start_s; vid.play(); };
+        if (vid) li.onclick = () => { vid.currentTime = s.start_s; vid.play(); };
         ul.append(li);
       }
       fl.append(ul);
@@ -228,9 +306,9 @@ async function renderDetail(caseId) {
 
     const prov = el("div", "card panel");
     prov.append(el("h2", "", "Provenance"));
-    prov.append(el("p", "sub", `${(d.provenance || {}).stack || ""}<br>
-      model ${((d.provenance || {}).git_sha || "").slice(0, 8)} · analyzed at
-      ${d.inference_fps || "?"} fps`));
+    prov.append(el("p", "sub", `${esc((d.provenance || {}).stack || "")}<br>
+      model ${esc(((d.provenance || {}).git_sha || "").slice(0, 8))} · analyzed at
+      ${esc(d.inference_fps || "?")} fps`));
     side.append(prov);
   }
 }
@@ -244,7 +322,9 @@ function phaseRow(p) {
   const pctText = p.percentile === null ? "" :
     `<small>p${Math.round(p.percentile)} of cohort</small>`;
   row.innerHTML = `
-    <span class='ph-name'><i style="background:${PHASE_COLORS[p.phase]}"></i>${nice(p.phase)}</span>
+    <a class='ph-name' href="#/phases/${encodeURIComponent(p.phase)}"
+       title="cohort profile for ${esc(nice(p.phase))}">
+      <i style="background:${PHASE_COLORS[p.phase]}"></i>${nice(p.phase)}</a>
     <span class='pct-track'>
       <span class='pct-band' style="left:0;right:0"></span>
       <span class='pct-iqr' style="left:${x(p.cohort_p25)};width:${x(p.cohort_p75 - p.cohort_p25)}"></span>
@@ -284,6 +364,7 @@ function timelineSVG(segs, total, vid, isModel) {
     r.setAttribute("width", Math.max(0.15, 100 * (s.end_s - s.start_s) / total));
     r.setAttribute("y", 0); r.setAttribute("height", 10);
     r.setAttribute("fill", PHASE_COLORS[s.phase]);
+    r.dataset.start = s.start_s; r.dataset.end = s.end_s;
     if (isModel && s.confidence !== undefined)
       r.setAttribute("fill-opacity", (0.45 + 0.55 * Math.min(1, s.confidence)).toFixed(2));
     svg.append(r);
@@ -314,18 +395,21 @@ function timelineSVG(segs, total, vid, isModel) {
   return svg;
 }
 
-/* ---------------- library ---------------- */
-async function renderLibrary() {
+/* ---------------- phase explorer ---------------- */
+async function renderPhases(phase) {
+  const phases = Object.keys(PHASE_COLORS).filter(p => p !== "idle");
+  if (!phase || !phases.includes(phase)) phase = "Incision";
   view.innerHTML = "";
-  view.append(el("h1", "", "Phase library"));
+  view.append(el("h1", "", "Phase explorer"));
   view.append(el("p", "sub",
-    "Search every indexed surgery by surgical step. Results are high-confidence segments; " +
-    "flagged ones are excluded."));
+    "The cohort profile for each surgical step, with high-confidence example segments " +
+    "from every indexed surgery (flagged segments are excluded)."));
   const bar = el("div", "toolbar");
   const sel = el("select");
-  for (const p of Object.keys(PHASE_COLORS).filter(p => p !== "idle"))
-    sel.append(new Option(nice(p), p));
-  sel.value = "Incision";
+  for (const p of phases) sel.append(new Option(nice(p), p));
+  sel.value = phase;
+  sel.addEventListener("input", () =>
+    location.hash = `#/phases/${encodeURIComponent(sel.value)}`);
   const conf = el("input"); conf.type = "range"; conf.min = 0.7; conf.max = 0.99;
   conf.step = 0.01; conf.value = 0.9;
   const confLabel = el("span", "sub", "");
@@ -339,13 +423,13 @@ async function renderLibrary() {
 
   const drawHero = async () => {
     try {
-      const st = await api(`/api/phase_stats?phase=${encodeURIComponent(sel.value)}`);
-      const color = PHASE_COLORS[sel.value];
+      const st = await api(`/api/phase_stats?phase=${encodeURIComponent(phase)}`);
+      const color = PHASE_COLORS[phase];
       hero.innerHTML = `
         <div>
           <h2 style="display:flex;align-items:center">
             <i style="width:11px;height:11px;border-radius:3px;background:${color};
-              display:inline-block;margin-right:8px"></i>${nice(sel.value)} — cohort profile</h2>
+              display:inline-block;margin-right:8px"></i>${nice(phase)} — cohort profile</h2>
           <div class="tiles">
             <div class="tile"><b class="num">${st.total.p50}s</b>
               <span>median total per surgery</span></div>
@@ -374,25 +458,26 @@ async function renderLibrary() {
     drawHero();
     confLabel.textContent = `min confidence ${Number(conf.value).toFixed(2)}`;
     grid.innerHTML = "<p class='empty'>Searching…</p>";
-    const res = await api(`/api/search?phase=${encodeURIComponent(sel.value)}&min_conf=${conf.value}`);
+    const res = await api(`/api/search?phase=${encodeURIComponent(phase)}&min_conf=${conf.value}`);
     count.textContent = `${res.total} segments found`;
     grid.innerHTML = "";
     for (const h of res.hits) {
       const mid = (h.start_s + h.end_s) / 2;
+      const seek = `#/video/${encodeURIComponent(h.case)}?t=${h.start_s.toFixed(1)}`;
       const c = el("div", "hit card");
-      c.innerHTML = `<img loading="lazy" src="/api/frame?case=${h.case}&t=${mid.toFixed(1)}"
-          alt="${h.case}">
-        <div class="meta"><a href="#/video/${h.case}">${h.case}</a>
+      c.innerHTML = `<a href="${seek}"><img loading="lazy"
+          src="/api/frame?case=${encodeURIComponent(h.case)}&t=${mid.toFixed(1)}"
+          alt="${esc(h.case)}"></a>
+        <div class="meta"><a href="${seek}">${esc(h.case)}</a>
           <span class="num">${fmtT(h.start_s)}–${fmtT(h.end_s)}</span>
-          <a href="/api/clip?case=${h.case}&start=${h.start_s}&end=${h.end_s}"
+          <a href="/api/clip?case=${encodeURIComponent(h.case)}&start=${h.start_s}&end=${h.end_s}"
              title="download clip">⬇ clip</a></div>`;
       grid.append(c);
     }
     if (!res.hits.length) grid.innerHTML = "<p class='empty'>No segments at this confidence.</p>";
   };
-  sel.addEventListener("input", draw);
   conf.addEventListener("change", draw);
-  draw();
+  await draw();
 }
 
 /* ---------------- upload ---------------- */
@@ -436,8 +521,8 @@ function renderUpload() {
       prog.querySelector("i").style.width = `${stages[j.status] ?? 15}%`;
       prog.querySelector("p").textContent = `${j.status} — ${j.detail}`;
       if (j.status === "done") {
-        clearInterval(poll); videosCache = null;
-        location.hash = `#/video/${caseId}`;
+        clearInterval(poll); invalidateVideos();
+        location.hash = `#/video/${encodeURIComponent(caseId)}`;
       }
       if (j.status === "error") { clearInterval(poll); go.disabled = false; }
     }, 1500);
@@ -464,7 +549,7 @@ function histSVG(h, color) {
 }
 
 function sparkSVG(points, cohort, color) {
-  /* points: [{x: 0-1, y, label}], cohort: {p25,p50,p75} in y units */
+  /* points: [{x: 0-1, y, label, href?}], cohort: {p25,p50,p75} in y units */
   const ys = points.map(p => p.y).concat(cohort ? [cohort.p25, cohort.p75] : []);
   const yMax = Math.max(...ys) * 1.15 || 1;
   const X = x => 6 + 90 * x, Y = y => 92 - 84 * y / yMax;
@@ -477,9 +562,11 @@ function sparkSVG(points, cohort, color) {
   }
   const path = points.map((p, i) =>
     `${i ? "L" : "M"}${X(p.x).toFixed(1)},${Y(p.y).toFixed(1)}`).join(" ");
-  const dots = points.map(p =>
-    `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="1.8" fill="${color}">
-       <title>${p.label}</title></circle>`).join("");
+  const dots = points.map(p => {
+    const c = `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="1.8" fill="${color}">
+       <title>${esc(p.label)}</title></circle>`;
+    return p.href ? `<a href="${p.href}">${c}</a>` : c;
+  }).join("");
   return `<svg class="spark" viewBox="0 0 100 100" preserveAspectRatio="none">
       ${band}
       <line x1="6" y1="92" x2="96" y2="92" stroke="#d0d5d1" stroke-width="0.5"/>
@@ -489,62 +576,89 @@ function sparkSVG(points, cohort, color) {
     </svg>`;
 }
 
-/* ---------------- progress ---------------- */
-async function renderProgress() {
+/* ---------------- physicians ---------------- */
+async function renderPhysicians(name) {
+  if (name) return renderPhysicianDetail(name);
   view.innerHTML = "";
-  view.append(el("h1", "", "My progress"));
+  view.append(el("h1", "", "Physicians"));
   view.append(el("p", "sub",
-    "Your uploaded surgeries over time. Shaded band = cohort interquartile range; " +
-    "dashed line = cohort median."));
+    "Every physician with uploaded surgeries. Open one to see their timing trends " +
+    "against the cohort."));
   const docs = await api("/api/physicians");
   if (!docs.length) {
     view.append(el("p", "empty",
-      "No surgeries with a physician name yet. Upload a video with your name filled in " +
-      "and it will appear here."));
+      "No surgeries with a physician name yet. Upload a video with the physician field " +
+      "filled in and it will appear here."));
     return;
   }
-  const bar = el("div", "toolbar");
-  const sel = el("select");
-  for (const d of docs) sel.append(new Option(`${d.name} (${d.n_videos})`, d.name));
-  bar.append(sel);
-  view.append(bar);
+  const grid = el("div", "doc-grid");
+  for (const d of docs) {
+    const c = el("a", "card doc-card");
+    c.href = `#/physicians/${encodeURIComponent(d.name)}`;
+    c.innerHTML = `<b>${esc(d.name)}</b>
+      <span class="sub" style="margin:0">${d.n_videos} surger${d.n_videos === 1 ? "y" : "ies"}
+      ${d.last_date ? `· latest ${esc(d.last_date)}` : ""}</span>`;
+    grid.append(c);
+  }
+  view.append(grid);
+}
+
+async function renderPhysicianDetail(name) {
+  view.innerHTML = "";
+  const head = el("div", "detail-head");
+  const tw = el("div");
+  tw.append(el("h1", "", esc(name)));
+  tw.append(el("p", "sub",
+    "Surgeries over time. Shaded band = cohort interquartile range; " +
+    "dashed line = cohort median. Dots link to the surgery."));
+  head.append(tw);
+  head.append(Object.assign(el("a", "ghost-link", "← all physicians"), {href: "#/physicians"}));
+  view.append(head);
   const wrap = el("div");
   view.append(wrap);
 
-  const draw = async () => {
-    wrap.innerHTML = "<p class='empty'>Loading…</p>";
-    const pr = await api(`/api/progress?physician=${encodeURIComponent(sel.value)}`);
-    wrap.innerHTML = "";
-    const vids = pr.videos;
-    if (!vids.length) { wrap.append(el("p", "empty", "No surgeries yet.")); return; }
-    const xs = vids.map((v, i) => vids.length > 1 ? i / (vids.length - 1) : 0.5);
-    const grid = el("div", "prog-grid");
+  wrap.innerHTML = "<p class='empty'>Loading…</p>";
+  const pr = await api(`/api/progress?physician=${encodeURIComponent(name)}`);
+  wrap.innerHTML = "";
+  const vids = pr.videos;
+  if (!vids.length) { wrap.append(el("p", "empty", "No surgeries yet.")); return; }
 
-    const total = el("div", "card prog-card");
-    total.innerHTML = `<h3>Total operative time</h3>` +
-      sparkSVG(vids.map((v, i) => ({x: xs[i], y: v.duration_s,
-        label: `${v.case} · ${v.surgery_date || "no date"} · ${fmtT(v.duration_s)}`})), null, "#1c211f") +
-      `<div class="axis-note">${vids[0].surgery_date || ""} → ${vids[vids.length - 1].surgery_date || ""}
-       · ${vids.length} surgeries</div>`;
-    grid.append(total);
+  /* x positions: by date when >=2 dated surgeries span time, else by index */
+  const dates = vids.map(v => Date.parse(v.surgery_date || ""));
+  const valid = dates.filter(Number.isFinite);
+  const span = valid.length >= 2 ? Math.max(...valid) - Math.min(...valid) : 0;
+  const xs = vids.map((v, i) => {
+    if (span > 0 && Number.isFinite(dates[i]))
+      return (dates[i] - Math.min(...valid)) / span;
+    return vids.length > 1 ? i / (vids.length - 1) : 0.5;
+  });
+  const grid = el("div", "prog-grid");
 
-    const phaseOrder = Object.keys(PHASE_COLORS).filter(p => p !== "idle");
-    for (const p of phaseOrder) {
-      const pts = vids.map((v, i) => v.phases[p] ? {x: xs[i], y: v.phases[p].total_s,
-        label: `${v.case} · ${v.surgery_date || "no date"} · ${v.phases[p].total_s}s` +
-          (v.phases[p].percentile !== null ? ` (p${Math.round(v.phases[p].percentile)})` : "")}
-        : null).filter(Boolean);
-      if (!pts.length) continue;
-      const c = el("div", "card prog-card");
-      c.innerHTML = `<h3><i style="background:${PHASE_COLORS[p]}"></i>${nice(p)}</h3>` +
-        sparkSVG(pts, pr.cohort[p], PHASE_COLORS[p]) +
-        `<div class="axis-note">latest: ${pts[pts.length - 1].y.toFixed(0)}s
-         ${vids[vids.length - 1].phases[p] && vids[vids.length - 1].phases[p].percentile !== null
-           ? `· p${Math.round(vids[vids.length - 1].phases[p].percentile)} of cohort` : ""}</div>`;
-      grid.append(c);
-    }
-    wrap.append(grid);
-  };
-  sel.addEventListener("input", draw);
-  draw();
+  const total = el("div", "card prog-card");
+  total.innerHTML = `<h3>Total operative time</h3>` +
+    sparkSVG(vids.map((v, i) => ({x: xs[i], y: v.duration_s,
+      href: `#/video/${encodeURIComponent(v.case)}`,
+      label: `${v.case} · ${v.surgery_date || "no date"} · ${fmtT(v.duration_s)}`})), null, "#1c211f") +
+    `<div class="axis-note">${esc(vids[0].surgery_date || "")} → ${esc(vids[vids.length - 1].surgery_date || "")}
+     · ${vids.length} surgeries</div>`;
+  grid.append(total);
+
+  const phaseOrder = Object.keys(PHASE_COLORS).filter(p => p !== "idle");
+  for (const p of phaseOrder) {
+    const pts = vids.map((v, i) => v.phases[p] ? {x: xs[i], y: v.phases[p].total_s,
+      href: `#/video/${encodeURIComponent(v.case)}`,
+      label: `${v.case} · ${v.surgery_date || "no date"} · ${v.phases[p].total_s}s` +
+        (v.phases[p].percentile !== null ? ` (p${Math.round(v.phases[p].percentile)})` : "")}
+      : null).filter(Boolean);
+    if (!pts.length) continue;
+    const c = el("div", "card prog-card");
+    c.innerHTML = `<h3><a href="#/phases/${encodeURIComponent(p)}" class="ph-link">
+        <i style="background:${PHASE_COLORS[p]}"></i>${nice(p)}</a></h3>` +
+      sparkSVG(pts, pr.cohort[p], PHASE_COLORS[p]) +
+      `<div class="axis-note">latest: ${pts[pts.length - 1].y.toFixed(0)}s
+       ${vids[vids.length - 1].phases[p] && vids[vids.length - 1].phases[p].percentile !== null
+         ? `· p${Math.round(vids[vids.length - 1].phases[p].percentile)} of cohort` : ""}</div>`;
+    grid.append(c);
+  }
+  wrap.append(grid);
 }
