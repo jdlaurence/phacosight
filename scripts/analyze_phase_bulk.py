@@ -125,6 +125,11 @@ def video_features(video: Path, dino, seg, device, fps_out: float, batch: int = 
         if idx >= next_pick:
             next_pick += stride
             times.append(idx / vfps)
+            fh, fw = frame.shape[:2]
+            if fw * 3 > fh * 4:  # wider than 4:3 (e.g. 16:9 uploads): center-crop
+                cw = (fh * 4) // 3
+                x0 = (fw - cw) // 2
+                frame = frame[:, x0:x0 + cw]
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             buf_d.append(torch.from_numpy(cv2.resize(rgb, (518, 392))))
             buf_s.append(torch.from_numpy(cv2.resize(rgb, (512, 512))))
