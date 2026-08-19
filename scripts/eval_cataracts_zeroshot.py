@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from phacosight.data.cataracts import IGNORE_INDEX, cataracts_cases
 from phacosight.phase.decoding import mode_smooth, viterbi
 from phacosight.phase.heads import HEADS
-from phacosight.phase.metrics import PhaseMetrics, edit_score, segments
+from phacosight.phase.metrics import PhaseMetrics, edit_score, f1_at_k, segments
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_seed0", "runs/phase_mstcnpp_tools_1fps_seed1",
@@ -35,11 +35,30 @@ TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_seed0", "runs/phase_mstcnpp_tools_1
 TEMPERATURE = 1.04  # deployment value (analyze_phase_bulk)
 
 
+def video_macro_f1(pred: np.ndarray, true: np.ndarray) -> float:
+    """Per-video macro-F1 over classes present in that video's (spliced) ground truth
+    — the pre-registered per-video convention for the E7-c paired stats."""
+    f1s = []
+    for c in np.unique(true):
+        tp = int(((pred == c) & (true == c)).sum())
+        fp = int(((pred == c) & (true != c)).sum())
+        fn = int(((pred != c) & (true == c)).sum())
+        f1s.append(2 * tp / max(1, 2 * tp + fp + fn))
+    return float(np.mean(f1s))
+
+
+def video_f1_at_50(pred: np.ndarray, true: np.ndarray) -> float:
+    tp, fp, fn = f1_at_k(pred, true, 0.50)
+    denom = 2 * tp + fp + fn
+    return float(100 * 2 * tp / denom) if denom else 0.0
+
+
 def load_heads(device) -> list:
     heads = []
     for run in TOOLS_RUNS:
         for fold in range(4):
-            ckpt = torch.load(Path(run) / f"fold{fold}" / "val_best.pt", weights_only=False)
+            ckpt = torch.load(Path(run) / f"fold{fold}" / "val_best.pt",
+                              map_location="cpu", weights_only=False)
             cfg = ckpt["config"]
             eff = cfg.get("features_fps", 5.0) / cfg.get("frame_stride", 1)
             assert eff == 1.0, f"{run}/fold{fold} not a 1 fps head"
@@ -92,15 +111,23 @@ def main() -> None:
             row[f"acc_{name}"] = float((p[keep] == y[keep]).mean())
             row[f"edit_{name}"] = edit_score(p[keep], y[keep])
             row[f"segs_{name}"] = len(segments(p[keep]))
+            row[f"macro_f1_{name}"] = video_macro_f1(p[keep], y[keep])
+            row[f"f1_50_{name}"] = video_f1_at_50(p[keep], y[keep])
         per_video.append(row)
         print(f"  {stem}: acc(viterbi) {row['acc_viterbi']:.3f} edit {row['edit_viterbi']:.1f} "
               f"segs {row['segs_viterbi']}/{row['true_segments']} (ignored {row['ignored']})")
 
+    import subprocess
+    sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+                         cwd=Path(__file__).parents[1]).stdout.strip()
     result = {"experiment": "E7-0", "split": args.split, "temperature": TEMPERATURE,
               "grammar": args.trans, "ignore_frames_spliced": True,
+              "per_video_macro_f1_convention": "classes present in that video's spliced GT",
+              "git_sha": sha, "features": args.features, "tools": args.tools,
               "heads": TOOLS_RUNS, "decodings": {}, "per_video": per_video}
     for name in decodings:
         m = agg[name].compute()
+        m["confusion"] = agg[name].confusion.tolist()  # rows = true, cols = pred (PI #5)
         result["decodings"][name] = m
         print(f"{name:>8}: acc {m['accuracy']:.4f} macroF1 {m['macro_f1']:.4f} "
               f"edit {m['edit']:.1f} f1@50 {m['f1@50']:.1f} segratio {m['seg_ratio']:.2f} "

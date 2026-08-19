@@ -60,7 +60,7 @@ composite corpus (see README Data section).*
 | 9 | Vitrectomy | 13,860 | **IGNORE** | Complication management; no C1K phase; sizable, do not mislabel |
 | 10 | Irrigation/Aspiration | 49,062 | `Irrigation/Aspiration` | High |
 | 11 | Preparing Implant | 12,222 | **IGNORE** (alt: `idle`) | Off-eye activity; C1K would likely call this idle — verify on sampled frames before choosing |
-| 12 | Manual Aspiration | 11,068 | **IGNORE** (amended at freeze) | Sampled clips: occurs *only* in the two vitrectomy videos (train19, test07), single manual cannula unlike the C1K I/A handpiece — complication-correlated, unsafe merge |
+| 12 | Manual Aspiration | 11,068 | **IGNORE** (amended at freeze) | Sampled clips: in train+dev it occurs *only* in the two vitrectomy videos (train19, test07), single manual cannula unlike the C1K I/A handpiece — complication-correlated, unsafe merge. (Post-freeze, from cached `steps_raw`: also 23 frames in test02, the third complication video — strengthening the correlation.) |
 | 13 | Implantation | 9,576 | `Lens Implantation` | High |
 | 14 | Positioning | 27,143 | `Lens positioning` | High |
 | 15 | OVD Aspiration | 31,098 | `Viscoelastic_Suction` | High |
@@ -92,10 +92,12 @@ sampled): 200 stratified idle frames + 12 frames per ambiguous step. Decisions:
 - **ID 11 (Preparing Implant) → IGNORE confirmed.** Many frames are full-frame off-eye
   closeups (gloved hands loading the IOL cartridge); C1K idle keeps the camera on the
   eye, so the `idle` alternate would have polluted idle with out-of-distribution frames.
-- **ID 12 (Manual Aspiration) → IGNORE, amended from `Irrigation/Aspiration`.** Occurs
-  exclusively in the two vitrectomy (complication) videos, using a single manual cannula
-  visually unlike the C1K I/A handpiece. Complication-correlated appearance + atypical
-  instrument = unsafe merge; IGNORE-over-wrong-merge tiebreak applied.
+- **ID 12 (Manual Aspiration) → IGNORE, amended from `Irrigation/Aspiration`.** Within
+  the train+dev evidence base, occurs exclusively in the two vitrectomy (complication)
+  videos, using a single manual cannula visually unlike the C1K I/A handpiece.
+  Complication-correlated appearance + atypical instrument = unsafe merge;
+  IGNORE-over-wrong-merge tiebreak applied. (PI post-check from cached test `steps_raw`:
+  test02 — also a complication video — carries 23 frames too; correlation holds.)
 - **ID 18 (Wound Hydratation) → `Tonifying/Antibiotics` confirmed.** Sampled frames show
   cannula-at-incision stromal hydration late in surgery with the IOL in place — the
   expected match.
@@ -135,16 +137,27 @@ never used for any selection. C1K folds/seeds unchanged from Stage 2.
    already committed in `docs/stage2-phase-results.md`; no rerun.
 4. **E7-b (augmented):** same config + CATARACTS train+dev (30 videos, mapped labels)
    added to each C1K fold's *training* set only; C1K test folds unchanged. Same seeds.
-   **Pinned mechanics (B3):** Viterbi transition grammar estimated from C1K train folds
-   only (matches deployment; no IGNORE-hole transitions); class weights computed over the
-   composite train set excluding `ignore_index` frames, with before/after weight vectors
-   logged in the run dir.
+   **Pinned mechanics (B3, wording corrected per PI E7-0 review #2):** every Viterbi
+   grammar is C1K-only — no CATARACTS sequences ever enter a transition matrix (their
+   IGNORE holes would fabricate transitions). Concretely: the C1K guardrail eval uses
+   per-fold train-split grammars (as `eval_phase.py` already does); the external E7-c
+   eval uses the committed all-56 deployment asset, same as E7-0. Class weights computed
+   over the composite train set excluding `ignore_index` frames, with before/after
+   weight vectors logged in the run dir.
 5. **E7-c (primary):** E7-b evaluated on CATARACTS official test; compared against E7-0.
 
 **Decision rule:**
 - **Primary endpoint:** E7-b beats E7-0 on CATARACTS official test — paired per-video
   stats (n=20) on macro-F1, edit, and F1@50; call it a win only if all three improve and
-  the macro-F1 gain exceeds the Stage-2 seed spread (0.7pp).
+  the macro-F1 gain exceeds the Stage-2 seed spread (0.7pp). **Per-video convention
+  (pre-registered, PI E7-0 review #1):** per-video macro-F1 is macro over the classes
+  present in that video's spliced ground truth; per-video F1@50 from that video's own
+  segment counts — both emitted by the harness for every video. **Grammar for the
+  external eval (PI #2):** E7-c decodes with the same committed deployment grammar asset
+  as E7-0 (`app/assets/transition_matrix_1fps.npy`, all 56 C1K videos — leakage-free for
+  CATARACTS); the fold-restricted grammars apply only to the C1K guardrail eval.
+  **Comparability caveat (PI #7):** spliced segmental numbers are internal to the
+  E7-0↔E7-c pairing and must never be quoted against external CATARACTS-2020 baselines.
 - **Guardrail (C1K non-inferiority):** seed-mean C1K macro-F1 drop ≤0.3pp *and* Wilcoxon
   on paired per-video deltas (n=56) not significantly worse (α=0.05), on the Stage-2
   product metrics (edit, F1@50, boundary error, duration MAE). Guardrail failure vetoes
@@ -154,13 +167,19 @@ never used for any selection. C1K folds/seeds unchanged from Stage 2.
   (`Phacoemulsification`, `Irrigation/Aspiration`, `Tonifying/Antibiotics`) **and the two
   absent-source classes** (`Capsule Pulishing`, `Anterior_Chamber Flushing`) — the latter
   face active aliasing, not just imbalance: CATARACTS labels polishing-like I/A activity
-  as `Irrigation/Aspiration`, training against C1K's polishing class. **Pre-registered
-  fallback:** if either absent-source class regresses beyond the Stage-2 seed spread,
-  first IGNORE the conflicting CATARACTS I/A spans; if that fails, escalate to Strategy C.
-  Calibration must not degrade (Stage-2 confidence pipeline re-run on E7-b).
-- **Conditional ablations (run only if the probe fires):** E7-b-notools (drop
-  out-of-domain tool features); E7-b-novit (exclude the vitrectomy-containing videos —
-  complicated cases look atypical even outside the IGNOREd span).
+  as `Irrigation/Aspiration`, training against C1K's polishing class — and E7-0 showed
+  the aliasing also runs through `Viscodilatation` (32% of true Viscoelastic frames
+  predicted as Capsule Pulishing zero-shot; log this confusion cell in the probe
+  diagnostics). **Pre-registered fallback (amended per PI E7-0 review #3):** if either
+  absent-source class regresses beyond the Stage-2 seed spread, first IGNORE the
+  conflicting CATARACTS spans — I/A or Viscodilatation, whichever the regression traces
+  to; if that fails, escalate to Strategy C. Calibration must not degrade (Stage-2
+  confidence pipeline re-run on E7-b).
+- **Conditional ablations:** E7-b-notools (drop out-of-domain tool features) runs if the
+  probe fires **or the primary endpoint fails** (PI #4: E7-0 measured 3–6× attenuation
+  of the seg tool channel on CATARACTS; idle-attraction from weak tool features is the
+  likeliest failure mode). E7-b-novit (exclude the vitrectomy-containing videos) runs if
+  the probe fires.
 
 ## Risks / open questions for PI
 
