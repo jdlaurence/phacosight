@@ -45,9 +45,11 @@ def load_features(feat_dir: Path, cases: list[str], extra_dirs: list[Path],
 
 
 def class_weights(data: dict, cases: list[str]) -> torch.Tensor:
+    """1/sqrt(count); ignore_index frames (-100, composite corpus) are excluded (E7 B3a)."""
     counts = np.zeros(NUM_CLASSES)
     for c in cases:
-        counts += np.bincount(data[c][1], minlength=NUM_CLASSES)
+        y = data[c][1]
+        counts += np.bincount(y[y >= 0], minlength=NUM_CLASSES)
     w = 1.0 / np.sqrt(np.maximum(counts, 1))
     return torch.tensor(w / w.mean(), dtype=torch.float32)
 
@@ -73,9 +75,31 @@ def run_fold(cfg: dict, fold: int) -> dict:
                          stride=cfg.get("frame_stride", 1))
     eff_fps = cfg.get("features_fps", 5.0) / cfg.get("frame_stride", 1)
 
+    # E7-b composite corpus: augmentation cases join every fold's TRAIN set only.
+    # Val/test stay pure C1K; the eval grammar (eval_phase) is built from the C1K
+    # split CSVs and never sees these cases (pre-registered B3b).
+    aug_cases: list[str] = []
+    weight_log = {}
+    if cfg.get("aug_features"):
+        from phacosight.data.cataracts import cataracts_cases
+        keep = set(cfg.get("aug_splits", ["train", "dev"]))
+        aug_cases = [stem for stem, _, _, s in
+                     cataracts_cases(cfg.get("aug_root", "data/cataracts")) if s in keep]
+        data |= load_features(Path(cfg["aug_features"]), aug_cases,
+                              [Path(p) for p in cfg.get("aug_extra_features", [])],
+                              stride=cfg.get("frame_stride", 1))
+    train_cases = splits["train"] + aug_cases
+
     in_dim = next(iter(data.values()))[0].shape[1]
     model = HEADS[cfg["head"]](in_dim, NUM_CLASSES, **cfg.get("head_kwargs", {})).to(device)
-    weights = class_weights(data, splits["train"]).to(device) if cfg.get("class_weighted", True) else None
+    weights = class_weights(data, train_cases).to(device) if cfg.get("class_weighted", True) else None
+    if aug_cases and weights is not None:
+        # pre-registered B3a logging: make the loss-weighting confound visible
+        weight_log = {"c1k_only": class_weights(data, splits["train"]).tolist(),
+                      "composite": weights.cpu().tolist()}
+        print(f"[fold {fold}] class weights c1k->composite: " + ", ".join(
+            f"{PHASES[i]}: {a:.2f}->{b:.2f}" for i, (a, b) in
+            enumerate(zip(weight_log["c1k_only"], weight_log["composite"]))))
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.get("lr", 5e-4),
                             weight_decay=cfg.get("weight_decay", 1e-4))
     epochs = cfg.get("epochs", 60)
@@ -91,7 +115,7 @@ def run_fold(cfg: dict, fold: int) -> dict:
     for epoch in range(epochs):
         model.train()
         t0 = time.time()
-        order = rng.permutation(splits["train"])
+        order = rng.permutation(train_cases)
         total = 0.0
         for c in order:
             x, y = data[c]
@@ -126,7 +150,8 @@ def run_fold(cfg: dict, fold: int) -> dict:
 
     result = {"fold": fold, "val_best_epoch": best["epoch"], "val_best": best["val"],
               "test_val_best": test_val_best, "test_last": test_last,
-              "history": history, "provenance": cfg.get("_provenance", {})}
+              "history": history, "provenance": cfg.get("_provenance", {}),
+              "aug_cases": aug_cases, "class_weight_log": weight_log}
     (out_dir / "metrics.json").write_text(json.dumps(result, indent=2))
     print(f"[fold {fold}] TEST (val-selected): acc {test_val_best['accuracy']:.4f} "
           f"macroF1 {test_val_best['macro_f1']:.4f} edit {test_val_best['edit']:.1f} "
