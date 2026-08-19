@@ -21,37 +21,43 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from phacosight.phase.decoding import mode_smooth, transition_matrix, viterbi
 from phacosight.phase.heads import HEADS
-from phacosight.phase.metrics import PhaseMetrics, edit_score, segments
+from phacosight.phase.metrics import (PhaseMetrics, edit_score, segments,
+                                      video_f1_at_50, video_macro_f1)
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 
-def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = ()):
+def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = (), stride: int = 1):
     d = np.load(feat_dir / f"{case}.npz")
     feats = [d["features"].astype(np.float32)]
     for e in extra_dirs:
         feats.append(np.load(Path(e) / f"{case}.npz")["features"].astype(np.float32))
-    return np.concatenate(feats, axis=1), d["labels"].astype(np.int64)
+    # frame_stride matters: 1 fps heads fed 5 fps sequences silently collapse
+    # (MS-TCN++ receptive fields are in samples — the 2026-08-14 incident class)
+    return np.concatenate(feats, axis=1)[::stride], d["labels"].astype(np.int64)[::stride]
 
 
 @torch.no_grad()
 def fold_logits(run_dir: Path, fold: int, feat_dir: Path, split_dir: Path, device):
-    ckpt = torch.load(run_dir / f"fold{fold}" / "val_best.pt", weights_only=False)
+    ckpt = torch.load(run_dir / f"fold{fold}" / "val_best.pt",
+                      map_location="cpu", weights_only=False)
     cfg = ckpt["config"]
     extra_dirs = [Path(p) for p in cfg.get("extra_features", [])]
+    stride = int(cfg.get("frame_stride", 1))
+    eff_fps = cfg.get("features_fps", 5.0) / stride
     cases = {s: pd.read_csv(split_dir / f"fold{fold}_{s}.csv")["case"].tolist()
              for s in ("train", "test")}
-    sample_x, _ = load_case(feat_dir, cases["test"][0], extra_dirs)
+    sample_x, _ = load_case(feat_dir, cases["test"][0], extra_dirs, stride)
     model = HEADS[cfg["head"]](sample_x.shape[1], NUM_CLASSES,
                                **cfg.get("head_kwargs", {})).to(device)
     model.load_state_dict(ckpt["model"])
     model.eval()
     out = {}
     for c in cases["test"]:
-        x, y = load_case(feat_dir, c, extra_dirs)
+        x, y = load_case(feat_dir, c, extra_dirs, stride)
         logits = model(torch.from_numpy(x).unsqueeze(0).to(device))[-1, 0]
         out[c] = (torch.log_softmax(logits, -1).cpu().numpy(), y)
-    train_labels = [load_case(feat_dir, c)[1] for c in cases["train"]]
-    return out, train_labels
+    train_labels = [load_case(feat_dir, c, stride=stride)[1] for c in cases["train"]]
+    return out, train_labels, eff_fps
 
 
 def idle_split_accuracy(pred: np.ndarray, true: np.ndarray) -> dict:
@@ -84,12 +90,14 @@ def main() -> None:
     run_dir, feat_dir, split_dir = Path(args.run), Path(args.features), Path(args.split_dir)
 
     decodings = ("argmax", "mode", "viterbi")
-    agg = {d: PhaseMetrics(NUM_CLASSES, PHASES, fps=args.fps) for d in decodings}
+    agg = None
     idle_acc = {d: {"margin": [], "gap": []} for d in decodings}
     per_video = []
 
     for fold in range(args.num_folds):
-        logits, train_labels = fold_logits(run_dir, fold, feat_dir, split_dir, device)
+        logits, train_labels, eff_fps = fold_logits(run_dir, fold, feat_dir, split_dir, device)
+        if agg is None:  # metric fps comes from the checkpoints, not a CLI guess
+            agg = {d: PhaseMetrics(NUM_CLASSES, PHASES, fps=eff_fps) for d in decodings}
         log_trans = transition_matrix(train_labels, NUM_CLASSES)
         for case, (lp, y) in logits.items():
             preds = {
@@ -102,6 +110,8 @@ def main() -> None:
                 agg[d].update(p, y)
                 row[f"edit_{d}"] = edit_score(p, y)
                 row[f"segs_{d}"] = len(segments(p))
+                row[f"macro_f1_{d}"] = video_macro_f1(p, y)
+                row[f"f1_50_{d}"] = video_f1_at_50(p, y)
                 for k, (acc, n) in idle_split_accuracy(p, y).items():
                     idle_acc[d][k].append((acc, n))
             per_video.append(row)

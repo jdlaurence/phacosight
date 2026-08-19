@@ -27,30 +27,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from phacosight.data.cataracts import IGNORE_INDEX, cataracts_cases
 from phacosight.phase.decoding import mode_smooth, viterbi
 from phacosight.phase.heads import HEADS
-from phacosight.phase.metrics import PhaseMetrics, edit_score, f1_at_k, segments
+from phacosight.phase.metrics import (PhaseMetrics, edit_score, segments,
+                                      video_f1_at_50, video_macro_f1)
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_seed0", "runs/phase_mstcnpp_tools_1fps_seed1",
               "runs/phase_mstcnpp_tools_1fps_seed2"]
 TEMPERATURE = 1.04  # deployment value (analyze_phase_bulk)
-
-
-def video_macro_f1(pred: np.ndarray, true: np.ndarray) -> float:
-    """Per-video macro-F1 over classes present in that video's (spliced) ground truth
-    — the pre-registered per-video convention for the E7-c paired stats."""
-    f1s = []
-    for c in np.unique(true):
-        tp = int(((pred == c) & (true == c)).sum())
-        fp = int(((pred == c) & (true != c)).sum())
-        fn = int(((pred != c) & (true == c)).sum())
-        f1s.append(2 * tp / max(1, 2 * tp + fp + fn))
-    return float(np.mean(f1s))
-
-
-def video_f1_at_50(pred: np.ndarray, true: np.ndarray) -> float:
-    tp, fp, fn = f1_at_k(pred, true, 0.50)
-    denom = 2 * tp + fp + fn
-    return float(100 * 2 * tp / denom) if denom else 0.0
 
 
 def load_heads(device, runs=TOOLS_RUNS) -> list:

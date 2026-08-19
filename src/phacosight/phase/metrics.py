@@ -60,6 +60,24 @@ def f1_at_k(pred: np.ndarray, true: np.ndarray, iou_threshold: float) -> tuple[i
     return tp, fp, fn
 
 
+def video_macro_f1(pred: np.ndarray, true: np.ndarray) -> float:
+    """Per-video macro-F1 over classes present in that video's ground truth —
+    the pre-registered per-video convention for E7 paired stats."""
+    f1s = []
+    for c in np.unique(true):
+        tp = int(((pred == c) & (true == c)).sum())
+        fp = int(((pred == c) & (true != c)).sum())
+        fn = int(((pred != c) & (true == c)).sum())
+        f1s.append(2 * tp / max(1, 2 * tp + fp + fn))
+    return float(np.mean(f1s))
+
+
+def video_f1_at_50(pred: np.ndarray, true: np.ndarray) -> float:
+    tp, fp, fn = f1_at_k(pred, true, 0.50)
+    denom = 2 * tp + fp + fn
+    return float(100 * 2 * tp / denom) if denom else 0.0
+
+
 class PhaseMetrics:
     """Accumulates per-video predictions; computes frame + segmental metrics."""
 
