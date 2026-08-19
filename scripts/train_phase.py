@@ -81,13 +81,26 @@ def run_fold(cfg: dict, fold: int) -> dict:
     aug_cases: list[str] = []
     weight_log = {}
     if cfg.get("aug_features"):
-        from phacosight.data.cataracts import cataracts_cases
+        from phacosight.data.cataracts import IGNORE_INDEX, STEP_TO_C1K_ID, cataracts_cases
         keep = set(cfg.get("aug_splits", ["train", "dev"]))
         aug_cases = [stem for stem, _, _, s in
                      cataracts_cases(cfg.get("aug_root", "data/cataracts")) if s in keep]
         data |= load_features(Path(cfg["aug_features"]), aug_cases,
                               [Path(p) for p in cfg.get("aug_extra_features", [])],
                               stride=cfg.get("frame_stride", 1))
+        overrides = cfg.get("aug_label_overrides") or {}
+        if overrides:
+            # falsification-probe fallback: remap labels from cached steps_raw
+            # (steps cached exactly so map amendments never re-extract features)
+            from phacosight.phase.timeline import PHASE_ID
+            lut = STEP_TO_C1K_ID.copy()
+            for k, v in overrides.items():
+                lut[int(k)] = IGNORE_INDEX if v is None else PHASE_ID[v]
+            stride = cfg.get("frame_stride", 1)
+            for c in aug_cases:
+                steps = np.load(Path(cfg["aug_features"]) / f"{c}.npz")["steps_raw"][::stride]
+                data[c] = (data[c][0], lut[steps.astype(np.int64)])
+            print(f"[fold {fold}] aug label overrides applied: {overrides}")
     train_cases = splits["train"] + aug_cases
 
     in_dim = next(iter(data.values()))[0].shape[1]

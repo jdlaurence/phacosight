@@ -119,6 +119,7 @@ def main() -> None:
     result = {"run": str(run_dir), "decodings": {}}
     for d in decodings:
         m = agg[d].compute()
+        m["confusion"] = agg[d].confusion.tolist()  # rows = true, cols = pred
         m["idle_margin_acc"] = float(np.average(
             [a for a, _ in idle_acc[d]["margin"]], weights=[n for _, n in idle_acc[d]["margin"]]))
         m["idle_gap_acc"] = float(np.average(

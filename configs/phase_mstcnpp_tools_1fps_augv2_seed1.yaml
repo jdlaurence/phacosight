@@ -1,0 +1,29 @@
+# E7-b: winning Stage-2 recipe + CATARACTS train+dev in training folds only
+# (docs/cataracts-harmonization-plan.md, pre-registered; frozen label map)
+run_name: phase_mstcnpp_tools_1fps_augv2_seed1
+head: mstcnpp
+features: data/features/phase_dinov2l
+split_dir: TrainIDs_PhaseRecognition
+num_folds: 4
+
+epochs: 60
+lr: 5.0e-4
+weight_decay: 1.0e-4
+tmse_weight: 0.15
+class_weighted: true
+select_on: macro_f1
+seed: 1
+out_dir: runs
+extra_features:
+  - data/features/phase_tools
+frame_stride: 5
+features_fps: 5.0
+
+aug_features: data/features/cataracts_dinov2l
+aug_extra_features:
+  - data/features/cataracts_tools
+aug_root: data/cataracts
+aug_splits: [train, dev]
+
+# Probe fallback (plan doc, map-freeze + probe sections): Viscodilatation -> IGNORE
+aug_label_overrides: {4: null}
