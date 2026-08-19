@@ -34,7 +34,7 @@ from phacosight.phase.timeline import NUM_CLASSES, PHASES
 
 TOOLS_RUNS = ["runs/phase_mstcnpp_tools_1fps_seed0", "runs/phase_mstcnpp_tools_1fps_seed1",
               "runs/phase_mstcnpp_tools_1fps_seed2"]
-TEMPERATURE = 1.04  # deployment value (analyze_phase_bulk)
+TEMPERATURE = 1.04  # frozen at the E7-era value for reproducing recorded E7-0/E7-c results; deployment now uses 1.016 (analyze_phase_bulk)
 
 
 def load_heads(device, runs=TOOLS_RUNS) -> list:

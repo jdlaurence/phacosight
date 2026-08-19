@@ -1,0 +1,26 @@
+[
+  {
+    "model": "segformer_b2",
+    "image_size": 512,
+    "batch": 1,
+    "fps": 86.3007935652481,
+    "ms_per_frame": 11.58737896475941,
+    "gpu": "NVIDIA A40"
+  },
+  {
+    "model": "efficientvit_b1",
+    "image_size": 512,
+    "batch": 1,
+    "fps": 139.20040948502478,
+    "ms_per_frame": 7.183886913117021,
+    "gpu": "NVIDIA A40"
+  },
+  {
+    "model": "pidnet_s",
+    "image_size": 512,
+    "batch": 1,
+    "fps": 162.78574162726727,
+    "ms_per_frame": 6.1430441634729505,
+    "gpu": "NVIDIA A40"
+  }
+]

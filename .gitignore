@@ -6,5 +6,8 @@ __pycache__/
 # dataset dir/symlink at repo root only — NOT src/phacosight/data
 /data
 /data/
-runs/
+# runs/: checkpoints ignored; small JSON receipts tracked (provenance)
+runs/**
+!runs/**/
+!runs/**/*.json
 .DS_Store

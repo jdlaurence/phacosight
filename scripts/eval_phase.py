@@ -6,7 +6,7 @@ that fold's TRAIN videos only. Reports full metrics per decoding, the
 margin-idle vs gap-idle diagnostic, and the pre-registered falsification probe
 (the 10 most-fragmented ground-truth timelines must improve, not lose repeats).
 
-    python scripts/eval_phase.py --run runs/phase_mstcnpp_dinov2l --out results.json
+    python scripts/eval_phase.py --run runs/phase_mstcnpp_tools_1fps_aug_seed0 --out results.json
 """
 
 import argparse

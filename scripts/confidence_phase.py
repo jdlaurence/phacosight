@@ -6,8 +6,8 @@ Honest protocol: a test video is only ever scored by models from the fold that
 held it out (the seed ensemble is within-fold, never across folds — cross-fold
 models trained on the video). Deployment on NEW videos can use all folds.
 
-    python scripts/confidence_phase.py --runs runs/phase_mstcnpp_dinov2l \
-        runs/phase_mstcnpp_dinov2l_seed1 runs/phase_mstcnpp_dinov2l_seed2
+    python scripts/confidence_phase.py --runs runs/phase_mstcnpp_tools_1fps_aug_seed0 \
+        runs/phase_mstcnpp_tools_1fps_aug_seed1 runs/phase_mstcnpp_tools_1fps_aug_seed2
 """
 
 import argparse

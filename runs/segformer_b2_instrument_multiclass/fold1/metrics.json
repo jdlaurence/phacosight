@@ -1,0 +1,1060 @@
+{
+  "best": {
+    "per_class_iou": {
+      "background": 0.9958344974000239,
+      "slit/incision knife": 0.831257125090683,
+      "gauge/cannula/spatula": 0.7385248922333052,
+      "phacoemulsifier tip": 0.8313851792209235,
+      "irrigation-aspiration": 0.8754815808364305,
+      "lens injector": 0.8487194904358963,
+      "forceps": 0.6635599622916514
+    },
+    "per_class_dice": {
+      "background": 0.9979129017935092,
+      "slit/incision knife": 0.9078540787105683,
+      "gauge/cannula/spatula": 0.8495994455214245,
+      "phacoemulsifier tip": 0.9079304437470627,
+      "irrigation-aspiration": 0.933607228972072,
+      "lens injector": 0.9181701116114515,
+      "forceps": 0.7977589955670231
+    },
+    "miou": 0.8263946753584162,
+    "mdice": 0.9018333151318731,
+    "epoch": 34,
+    "train_loss": 0.07363336536634181,
+    "epoch_seconds": 21.679263591766357
+  },
+  "last": {
+    "per_class_iou": {
+      "background": 0.9957216497828784,
+      "slit/incision knife": 0.8386053350136526,
+      "gauge/cannula/spatula": 0.728702408332751,
+      "phacoemulsifier tip": 0.8263205611490194,
+      "irrigation-aspiration": 0.8622049251188001,
+      "lens injector": 0.8394127246171339,
+      "forceps": 0.649064007719524
+    },
+    "per_class_dice": {
+      "background": 0.9978562390112935,
+      "slit/incision knife": 0.9122189727654908,
+      "gauge/cannula/spatula": 0.8430628716894644,
+      "phacoemulsifier tip": 0.9049019966452597,
+      "irrigation-aspiration": 0.9260043440855956,
+      "lens injector": 0.9126964420579989,
+      "forceps": 0.7871907999703527
+    },
+    "miou": 0.8200045159619656,
+    "mdice": 0.8977045237464937,
+    "epoch": 39,
+    "train_loss": 0.07350975161950503,
+    "epoch_seconds": 21.55159330368042
+  },
+  "history": [
+    {
+      "per_class_iou": {
+        "background": 0.9800213097328784,
+        "slit/incision knife": 0.001465932991990482,
+        "gauge/cannula/spatula": 0.4170860287003544,
+        "phacoemulsifier tip": 0.47511619519431647,
+        "irrigation-aspiration": 0.478165107016963,
+        "lens injector": 0.41349382347011837,
+        "forceps": 0.34795208176812004
+      },
+      "per_class_dice": {
+        "background": 0.9899098609853765,
+        "slit/incision knife": 0.002927574356145785,
+        "gauge/cannula/spatula": 0.5886530813981344,
+        "phacoemulsifier tip": 0.6441746036578896,
+        "irrigation-aspiration": 0.6469711735814581,
+        "lens injector": 0.5850663322390666,
+        "forceps": 0.5162677315824289
+      },
+      "miou": 0.44475721126782014,
+      "mdice": 0.5677100511143572,
+      "epoch": 0,
+      "train_loss": 1.9629710742405482,
+      "epoch_seconds": 21.859520196914673
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9926481778740119,
+        "slit/incision knife": 0.5406659505907626,
+        "gauge/cannula/spatula": 0.6058554305828375,
+        "phacoemulsifier tip": 0.6845255929520645,
+        "irrigation-aspiration": 0.7632748675527373,
+        "lens injector": 0.7159210485763472,
+        "forceps": 0.5076709399225933
+      },
+      "per_class_dice": {
+        "background": 0.996310526761512,
+        "slit/incision knife": 0.7018600630246242,
+        "gauge/cannula/spatula": 0.7545578749426345,
+        "phacoemulsifier tip": 0.8127221050437832,
+        "irrigation-aspiration": 0.8657468913080946,
+        "lens injector": 0.8344452085022528,
+        "forceps": 0.673450587233124
+      },
+      "miou": 0.6872231440073363,
+      "mdice": 0.8055847509737178,
+      "epoch": 1,
+      "train_loss": 0.8659011200070381,
+      "epoch_seconds": 21.586891412734985
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9937211809562152,
+        "slit/incision knife": 0.6083427533680484,
+        "gauge/cannula/spatula": 0.6252757741447251,
+        "phacoemulsifier tip": 0.7277972309546108,
+        "irrigation-aspiration": 0.8019573343908982,
+        "lens injector": 0.705602927435412,
+        "forceps": 0.5404031221971736
+      },
+      "per_class_dice": {
+        "background": 0.9968507035468352,
+        "slit/incision knife": 0.7564839672316254,
+        "gauge/cannula/spatula": 0.7694396041481223,
+        "phacoemulsifier tip": 0.8424567627678181,
+        "irrigation-aspiration": 0.8900958075813462,
+        "lens injector": 0.827394132696963,
+        "forceps": 0.7016385703326318
+      },
+      "miou": 0.7147286176352976,
+      "mdice": 0.8263370783293346,
+      "epoch": 2,
+      "train_loss": 0.6492292489856482,
+      "epoch_seconds": 21.48486566543579
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9944297318996312,
+        "slit/incision knife": 0.7115556821882123,
+        "gauge/cannula/spatula": 0.6731905153045201,
+        "phacoemulsifier tip": 0.7542136385290817,
+        "irrigation-aspiration": 0.8111869034416103,
+        "lens injector": 0.7564057332900561,
+        "forceps": 0.5411532289367421
+      },
+      "per_class_dice": {
+        "background": 0.9972070873135935,
+        "slit/incision knife": 0.8314724313012045,
+        "gauge/cannula/spatula": 0.8046788565281816,
+        "phacoemulsifier tip": 0.8598880113159926,
+        "irrigation-aspiration": 0.8957517326347668,
+        "lens injector": 0.8613109362529527,
+        "forceps": 0.7022705059769943
+      },
+      "miou": 0.7488764905128363,
+      "mdice": 0.8503685087605266,
+      "epoch": 3,
+      "train_loss": 0.5321057114217963,
+      "epoch_seconds": 21.518521547317505
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9945459148119804,
+        "slit/incision knife": 0.6771248747850083,
+        "gauge/cannula/spatula": 0.6866239426676465,
+        "phacoemulsifier tip": 0.7821143169893848,
+        "irrigation-aspiration": 0.8367651973607577,
+        "lens injector": 0.7459897696805542,
+        "forceps": 0.5750644390216503
+      },
+      "per_class_dice": {
+        "background": 0.9972655003088592,
+        "slit/incision knife": 0.8074829548656111,
+        "gauge/cannula/spatula": 0.814199212163025,
+        "phacoemulsifier tip": 0.8777375385330497,
+        "irrigation-aspiration": 0.9111291944807133,
+        "lens injector": 0.8545179160093708,
+        "forceps": 0.7302106818929275
+      },
+      "miou": 0.7568897793309974,
+      "mdice": 0.8560775711790795,
+      "epoch": 4,
+      "train_loss": 0.5199806517256158,
+      "epoch_seconds": 21.528609037399292
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9942861131474504,
+        "slit/incision knife": 0.7276967585758989,
+        "gauge/cannula/spatula": 0.6720129510196727,
+        "phacoemulsifier tip": 0.7935335251058256,
+        "irrigation-aspiration": 0.8373938959286212,
+        "lens injector": 0.7505447923158867,
+        "forceps": 0.5389506329704752
+      },
+      "per_class_dice": {
+        "background": 0.9971348710624416,
+        "slit/incision knife": 0.8423894470644522,
+        "gauge/cannula/spatula": 0.8038370164655093,
+        "phacoemulsifier tip": 0.8848828460666817,
+        "irrigation-aspiration": 0.9115017719218026,
+        "lens injector": 0.8574985291555459,
+        "forceps": 0.7004131535138268
+      },
+      "miou": 0.7592026670091185,
+      "mdice": 0.85680823360718,
+      "epoch": 5,
+      "train_loss": 0.5040076524019241,
+      "epoch_seconds": 21.52356243133545
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9947982105885776,
+        "slit/incision knife": 0.7091111196289624,
+        "gauge/cannula/spatula": 0.6987249847310107,
+        "phacoemulsifier tip": 0.7893823820581486,
+        "irrigation-aspiration": 0.8558863183797004,
+        "lens injector": 0.7830158217629964,
+        "forceps": 0.5301306620652445
+      },
+      "per_class_dice": {
+        "background": 0.9973923230009879,
+        "slit/incision knife": 0.8298010720132768,
+        "gauge/cannula/spatula": 0.8226463859794848,
+        "phacoemulsifier tip": 0.8822959139121517,
+        "irrigation-aspiration": 0.9223477859645415,
+        "lens injector": 0.8783049619703006,
+        "forceps": 0.6929220820262731
+      },
+      "miou": 0.76586421417352,
+      "mdice": 0.8608157892667166,
+      "epoch": 6,
+      "train_loss": 0.47910500557294916,
+      "epoch_seconds": 21.656883478164673
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9949103499851356,
+        "slit/incision knife": 0.7718346554674133,
+        "gauge/cannula/spatula": 0.6847980473827451,
+        "phacoemulsifier tip": 0.7946905718007666,
+        "irrigation-aspiration": 0.8571518172193824,
+        "lens injector": 0.7802734731084776,
+        "forceps": 0.6396836725590406
+      },
+      "per_class_dice": {
+        "background": 0.9974486823355735,
+        "slit/incision knife": 0.8712265030890276,
+        "gauge/cannula/spatula": 0.8129141037960564,
+        "phacoemulsifier tip": 0.8856017681124669,
+        "irrigation-aspiration": 0.9230821188358759,
+        "lens injector": 0.8765770932328363,
+        "forceps": 0.7802525368331461
+      },
+      "miou": 0.7890489410747087,
+      "mdice": 0.8781575437478547,
+      "epoch": 7,
+      "train_loss": 0.48019071681691067,
+      "epoch_seconds": 21.692126274108887
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9953513488829766,
+        "slit/incision knife": 0.77181323526249,
+        "gauge/cannula/spatula": 0.7163688781157269,
+        "phacoemulsifier tip": 0.801134288140498,
+        "irrigation-aspiration": 0.846584462344624,
+        "lens injector": 0.7926722195639753,
+        "forceps": 0.6120407222249187
+      },
+      "per_class_dice": {
+        "background": 0.9976702593657876,
+        "slit/incision knife": 0.8712128568654107,
+        "gauge/cannula/spatula": 0.8347493213721922,
+        "phacoemulsifier tip": 0.8895886258071228,
+        "irrigation-aspiration": 0.9169192957138917,
+        "lens injector": 0.8843470779691938,
+        "forceps": 0.7593365524664757
+      },
+      "miou": 0.7908521649336013,
+      "mdice": 0.8791177127942964,
+      "epoch": 8,
+      "train_loss": 0.4543923039122352,
+      "epoch_seconds": 21.502524375915527
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9953978664004932,
+        "slit/incision knife": 0.7883325151366388,
+        "gauge/cannula/spatula": 0.7234342232468208,
+        "phacoemulsifier tip": 0.8154139479403685,
+        "irrigation-aspiration": 0.8626322866564311,
+        "lens injector": 0.835109286855248,
+        "forceps": 0.6428974946522537
+      },
+      "per_class_dice": {
+        "background": 0.997693626079791,
+        "slit/incision knife": 0.881639749279407,
+        "gauge/cannula/spatula": 0.839526352080818,
+        "phacoemulsifier tip": 0.898322885384323,
+        "irrigation-aspiration": 0.9262507611794089,
+        "lens injector": 0.9101466521226546,
+        "forceps": 0.7826385964370023
+      },
+      "miou": 0.809031088698322,
+      "mdice": 0.890888374651915,
+      "epoch": 9,
+      "train_loss": 0.46977983361908365,
+      "epoch_seconds": 21.488179445266724
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9952990839701177,
+        "slit/incision knife": 0.731214032249168,
+        "gauge/cannula/spatula": 0.7244126135692865,
+        "phacoemulsifier tip": 0.8158239562828686,
+        "irrigation-aspiration": 0.8552263822632152,
+        "lens injector": 0.8210718364660563,
+        "forceps": 0.6536113122200937
+      },
+      "per_class_dice": {
+        "background": 0.9976440043161205,
+        "slit/incision knife": 0.8447413417729585,
+        "gauge/cannula/spatula": 0.840184776971512,
+        "phacoemulsifier tip": 0.898571641221127,
+        "irrigation-aspiration": 0.9219644464304279,
+        "lens injector": 0.901745686276073,
+        "forceps": 0.7905259324122219
+      },
+      "miou": 0.7995227452886866,
+      "mdice": 0.8850539756286343,
+      "epoch": 10,
+      "train_loss": 0.4322167954274586,
+      "epoch_seconds": 21.48710584640503
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9953269744082996,
+        "slit/incision knife": 0.7503439841002905,
+        "gauge/cannula/spatula": 0.7202800376545822,
+        "phacoemulsifier tip": 0.809180819038964,
+        "irrigation-aspiration": 0.8565690938091417,
+        "lens injector": 0.812247116657213,
+        "forceps": 0.633103633263295
+      },
+      "per_class_dice": {
+        "background": 0.9976580151265253,
+        "slit/incision knife": 0.8573674556729846,
+        "gauge/cannula/spatula": 0.8373985884723826,
+        "phacoemulsifier tip": 0.8945273026593333,
+        "irrigation-aspiration": 0.92274410542051,
+        "lens injector": 0.8963977475162951,
+        "forceps": 0.7753379765596586
+      },
+      "miou": 0.7967216655616837,
+      "mdice": 0.8830615987753843,
+      "epoch": 11,
+      "train_loss": 0.43268008157610893,
+      "epoch_seconds": 21.545485973358154
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9953282168999598,
+        "slit/incision knife": 0.6701949294629702,
+        "gauge/cannula/spatula": 0.7217597936656807,
+        "phacoemulsifier tip": 0.8175090810969189,
+        "irrigation-aspiration": 0.8457659434582512,
+        "lens injector": 0.7937826830855242,
+        "forceps": 0.641349859256077
+      },
+      "per_class_dice": {
+        "background": 0.9976586392852708,
+        "slit/incision knife": 0.8025349827621172,
+        "gauge/cannula/spatula": 0.8383977792036036,
+        "phacoemulsifier tip": 0.8995928434135017,
+        "irrigation-aspiration": 0.9164389953729594,
+        "lens injector": 0.885037736812267,
+        "forceps": 0.7814907414641769
+      },
+      "miou": 0.7836700724179118,
+      "mdice": 0.8744502454734138,
+      "epoch": 12,
+      "train_loss": 0.43644627888820003,
+      "epoch_seconds": 21.51649045944214
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9954876554246137,
+        "slit/incision knife": 0.7642629374927965,
+        "gauge/cannula/spatula": 0.7222859817542723,
+        "phacoemulsifier tip": 0.8268514110888047,
+        "irrigation-aspiration": 0.8615273602182127,
+        "lens injector": 0.7990572989808262,
+        "forceps": 0.6268065443678508
+      },
+      "per_class_dice": {
+        "background": 0.9977387258883212,
+        "slit/incision knife": 0.8663821262140151,
+        "gauge/cannula/spatula": 0.8387526687276081,
+        "phacoemulsifier tip": 0.9052202122952087,
+        "irrigation-aspiration": 0.9256134275858534,
+        "lens injector": 0.8883066697580957,
+        "forceps": 0.7705975200774927
+      },
+      "miou": 0.7994684556181967,
+      "mdice": 0.8846587643637994,
+      "epoch": 13,
+      "train_loss": 0.41430958839399473,
+      "epoch_seconds": 21.49246621131897
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955147721647231,
+        "slit/incision knife": 0.8348113632947542,
+        "gauge/cannula/spatula": 0.7174805937826942,
+        "phacoemulsifier tip": 0.8057701474334362,
+        "irrigation-aspiration": 0.8396441074159827,
+        "lens injector": 0.8348073278584965,
+        "forceps": 0.6191149234818208
+      },
+      "per_class_dice": {
+        "background": 0.9977523454610103,
+        "slit/incision knife": 0.9099696895224052,
+        "gauge/cannula/spatula": 0.8355035816765382,
+        "phacoemulsifier tip": 0.8924393268752254,
+        "irrigation-aspiration": 0.9128331985857537,
+        "lens injector": 0.9099672921328972,
+        "forceps": 0.7647572318714067
+      },
+      "miou": 0.8067347479188439,
+      "mdice": 0.8890318094464625,
+      "epoch": 14,
+      "train_loss": 0.45039294726614443,
+      "epoch_seconds": 21.489914178848267
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9956272496815187,
+        "slit/incision knife": 0.8195749511256858,
+        "gauge/cannula/spatula": 0.7291949659024655,
+        "phacoemulsifier tip": 0.8276142454186816,
+        "irrigation-aspiration": 0.8650550336376227,
+        "lens injector": 0.8161222389060449,
+        "forceps": 0.6543137046954954
+      },
+      "per_class_dice": {
+        "background": 0.9978088341301318,
+        "slit/incision knife": 0.9008422001178387,
+        "gauge/cannula/spatula": 0.8433924228109225,
+        "phacoemulsifier tip": 0.9056771662765042,
+        "irrigation-aspiration": 0.9276455847529714,
+        "lens injector": 0.8987525414562869,
+        "forceps": 0.7910394538089534
+      },
+      "miou": 0.8153574841953591,
+      "mdice": 0.895022600479087,
+      "epoch": 15,
+      "train_loss": 0.4374146322453661,
+      "epoch_seconds": 21.51032066345215
+    },
+    {
+      "per_class_iou": {
+        "background": 0.995440357621573,
+        "slit/incision knife": 0.8051376227984778,
+        "gauge/cannula/spatula": 0.6925415024943905,
+        "phacoemulsifier tip": 0.8111913015476123,
+        "irrigation-aspiration": 0.862568991198375,
+        "lens injector": 0.8527332120410188,
+        "forceps": 0.483232869532069
+      },
+      "per_class_dice": {
+        "background": 0.9977149693494914,
+        "slit/incision knife": 0.8920512349083778,
+        "gauge/cannula/spatula": 0.8183450762935555,
+        "phacoemulsifier tip": 0.8957544140748379,
+        "irrigation-aspiration": 0.9262142720881432,
+        "lens injector": 0.9205137647439545,
+        "forceps": 0.651594067874884
+      },
+      "miou": 0.7861208367476452,
+      "mdice": 0.8717411141904634,
+      "epoch": 16,
+      "train_loss": 0.4316236744634807,
+      "epoch_seconds": 21.498878717422485
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9956359279338557,
+        "slit/incision knife": 0.763768115942029,
+        "gauge/cannula/spatula": 0.7252662410078555,
+        "phacoemulsifier tip": 0.8268892285182422,
+        "irrigation-aspiration": 0.8637981703202048,
+        "lens injector": 0.841594292187531,
+        "forceps": 0.6294125888609353
+      },
+      "per_class_dice": {
+        "background": 0.9978131922736716,
+        "slit/incision knife": 0.8660640920295809,
+        "gauge/cannula/spatula": 0.8407586304872852,
+        "phacoemulsifier tip": 0.905242874729649,
+        "irrigation-aspiration": 0.926922436211859,
+        "lens injector": 0.9139844706923438,
+        "forceps": 0.7725637977314701
+      },
+      "miou": 0.8066235092529505,
+      "mdice": 0.8890499277365514,
+      "epoch": 17,
+      "train_loss": 0.3710587581486574,
+      "epoch_seconds": 21.703992128372192
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9953817693589102,
+        "slit/incision knife": 0.7543002719993871,
+        "gauge/cannula/spatula": 0.7228926334179365,
+        "phacoemulsifier tip": 0.8073117237200849,
+        "irrigation-aspiration": 0.8532426894513759,
+        "lens injector": 0.8199792088524962,
+        "forceps": 0.5986690460257268
+      },
+      "per_class_dice": {
+        "background": 0.9976855403251611,
+        "slit/incision knife": 0.8599443140252224,
+        "gauge/cannula/spatula": 0.8391615581800197,
+        "phacoemulsifier tip": 0.8933840389839918,
+        "irrigation-aspiration": 0.9208105277393166,
+        "lens injector": 0.9010863474308547,
+        "forceps": 0.74895932652729
+      },
+      "miou": 0.7931110489751311,
+      "mdice": 0.8801473790302652,
+      "epoch": 18,
+      "train_loss": 0.2969550427847675,
+      "epoch_seconds": 21.57837414741516
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9954981917758988,
+        "slit/incision knife": 0.7048236298745375,
+        "gauge/cannula/spatula": 0.717263241356455,
+        "phacoemulsifier tip": 0.8174871256652088,
+        "irrigation-aspiration": 0.8601355003628705,
+        "lens injector": 0.805350062969355,
+        "forceps": 0.5279379844961241
+      },
+      "per_class_dice": {
+        "background": 0.997744017888538,
+        "slit/incision knife": 0.8268581189555747,
+        "gauge/cannula/spatula": 0.8353561924377925,
+        "phacoemulsifier tip": 0.8995795503816895,
+        "irrigation-aspiration": 0.9248095100545928,
+        "lens injector": 0.8921816100803774,
+        "forceps": 0.6910463511648672
+      },
+      "miou": 0.7754993909286357,
+      "mdice": 0.8667964787090616,
+      "epoch": 19,
+      "train_loss": 0.16170084389990994,
+      "epoch_seconds": 21.525794744491577
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9956389127709377,
+        "slit/incision knife": 0.7710827778137337,
+        "gauge/cannula/spatula": 0.7271194541677559,
+        "phacoemulsifier tip": 0.8247046549411404,
+        "irrigation-aspiration": 0.8634182657776582,
+        "lens injector": 0.8092146815654131,
+        "forceps": 0.6382830031416298
+      },
+      "per_class_dice": {
+        "background": 0.9978146912243724,
+        "slit/incision knife": 0.8707473049515805,
+        "gauge/cannula/spatula": 0.8420025058638827,
+        "phacoemulsifier tip": 0.9039322092020892,
+        "irrigation-aspiration": 0.9267036624408411,
+        "lens injector": 0.8945479934589571,
+        "forceps": 0.7792096993225659
+      },
+      "miou": 0.8042088214540384,
+      "mdice": 0.8878511523520414,
+      "epoch": 20,
+      "train_loss": 0.1331959773919412,
+      "epoch_seconds": 21.7274968624115
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9954395233781894,
+        "slit/incision knife": 0.812694569353165,
+        "gauge/cannula/spatula": 0.7207520788219367,
+        "phacoemulsifier tip": 0.8263804030342647,
+        "irrigation-aspiration": 0.8617230833584097,
+        "lens injector": 0.8035717568337654,
+        "forceps": 0.6351638169057293
+      },
+      "per_class_dice": {
+        "background": 0.9977145503191749,
+        "slit/incision knife": 0.8966701650605858,
+        "gauge/cannula/spatula": 0.8377175163029631,
+        "phacoemulsifier tip": 0.9049378778499312,
+        "irrigation-aspiration": 0.9257263779572691,
+        "lens injector": 0.8910893107402217,
+        "forceps": 0.7768809587624919
+      },
+      "miou": 0.8079607473836371,
+      "mdice": 0.8901052509989482,
+      "epoch": 21,
+      "train_loss": 0.0960845046211034,
+      "epoch_seconds": 21.738693714141846
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9958010113276877,
+        "slit/incision knife": 0.8458952898228118,
+        "gauge/cannula/spatula": 0.7372765170783757,
+        "phacoemulsifier tip": 0.8351966267603295,
+        "irrigation-aspiration": 0.8736379296095071,
+        "lens injector": 0.8370936752922311,
+        "forceps": 0.6486626985158422
+      },
+      "per_class_dice": {
+        "background": 0.9978960885135943,
+        "slit/incision knife": 0.9165149231233042,
+        "gauge/cannula/spatula": 0.8487727887075494,
+        "phacoemulsifier tip": 0.9101985199642625,
+        "irrigation-aspiration": 0.9325579033208254,
+        "lens injector": 0.9113238878894648,
+        "forceps": 0.7868955840388466
+      },
+      "miou": 0.8247948212009694,
+      "mdice": 0.9005942422225496,
+      "epoch": 22,
+      "train_loss": 0.0987603026774845,
+      "epoch_seconds": 21.528173685073853
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955182154574682,
+        "slit/incision knife": 0.754710912668382,
+        "gauge/cannula/spatula": 0.720564866237447,
+        "phacoemulsifier tip": 0.8308467016589987,
+        "irrigation-aspiration": 0.8664544443743323,
+        "lens injector": 0.8069294359958242,
+        "forceps": 0.6325795022627213
+      },
+      "per_class_dice": {
+        "background": 0.9977540748524291,
+        "slit/incision knife": 0.8602111119497127,
+        "gauge/cannula/spatula": 0.8375910497500595,
+        "phacoemulsifier tip": 0.9076092508522285,
+        "irrigation-aspiration": 0.9284496034563359,
+        "lens injector": 0.893149914900926,
+        "forceps": 0.7749448053047086
+      },
+      "miou": 0.8010862969507391,
+      "mdice": 0.8856728301523429,
+      "epoch": 23,
+      "train_loss": 0.09390534783181335,
+      "epoch_seconds": 21.53033995628357
+    },
+    {
+      "per_class_iou": {
+        "background": 0.995616946743842,
+        "slit/incision knife": 0.8061573315532901,
+        "gauge/cannula/spatula": 0.7282823996533281,
+        "phacoemulsifier tip": 0.8310320150118238,
+        "irrigation-aspiration": 0.865589279951822,
+        "lens injector": 0.8276389308366052,
+        "forceps": 0.635398670064011
+      },
+      "per_class_dice": {
+        "background": 0.9978036600344021,
+        "slit/incision knife": 0.8926767535361907,
+        "gauge/cannula/spatula": 0.8427817118306736,
+        "phacoemulsifier tip": 0.9077198084998611,
+        "irrigation-aspiration": 0.9279526734568022,
+        "lens injector": 0.9056919469949701,
+        "forceps": 0.7770566060679759
+      },
+      "miou": 0.8128165105449604,
+      "mdice": 0.8930975943458395,
+      "epoch": 24,
+      "train_loss": 0.08922823901022119,
+      "epoch_seconds": 21.491929054260254
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955531360229061,
+        "slit/incision knife": 0.7860295648552987,
+        "gauge/cannula/spatula": 0.7336423493356207,
+        "phacoemulsifier tip": 0.7992260522850881,
+        "irrigation-aspiration": 0.8190160033262857,
+        "lens injector": 0.81805267639002,
+        "forceps": 0.6406895818612708
+      },
+      "per_class_dice": {
+        "background": 0.9977716133452821,
+        "slit/incision knife": 0.8801977081706166,
+        "gauge/cannula/spatula": 0.8463595154061304,
+        "phacoemulsifier tip": 0.8884109378808066,
+        "irrigation-aspiration": 0.9005044505695586,
+        "lens injector": 0.8999218636660957,
+        "forceps": 0.781000365875968
+      },
+      "miou": 0.7988870520109271,
+      "mdice": 0.8848809221306368,
+      "epoch": 25,
+      "train_loss": 0.08619645041679698,
+      "epoch_seconds": 21.56679630279541
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9956610929159349,
+        "slit/incision knife": 0.8362975712373303,
+        "gauge/cannula/spatula": 0.7283984830365776,
+        "phacoemulsifier tip": 0.8343222041009907,
+        "irrigation-aspiration": 0.864460982644946,
+        "lens injector": 0.8395463016578188,
+        "forceps": 0.6539302581354726
+      },
+      "per_class_dice": {
+        "background": 0.9978258296965015,
+        "slit/incision knife": 0.9108519058529473,
+        "gauge/cannula/spatula": 0.8428594333835258,
+        "phacoemulsifier tip": 0.9096790108473835,
+        "irrigation-aspiration": 0.9273039132399666,
+        "lens injector": 0.9127753956518634,
+        "forceps": 0.7907591688571787
+      },
+      "miou": 0.8218024133898673,
+      "mdice": 0.8988649510756238,
+      "epoch": 26,
+      "train_loss": 0.08025403823038298,
+      "epoch_seconds": 21.535122871398926
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9952838448533098,
+        "slit/incision knife": 0.7732684503087073,
+        "gauge/cannula/spatula": 0.710521141481833,
+        "phacoemulsifier tip": 0.8153433394802381,
+        "irrigation-aspiration": 0.851906323133909,
+        "lens injector": 0.7959584305939381,
+        "forceps": 0.6018119682460574
+      },
+      "per_class_dice": {
+        "background": 0.9976363487536597,
+        "slit/incision knife": 0.8721391847625659,
+        "gauge/cannula/spatula": 0.830765693859013,
+        "phacoemulsifier tip": 0.8982800352397072,
+        "irrigation-aspiration": 0.9200317667172939,
+        "lens injector": 0.8863884787474821,
+        "forceps": 0.7514139988665786
+      },
+      "miou": 0.7920133568711417,
+      "mdice": 0.8795222152780429,
+      "epoch": 27,
+      "train_loss": 0.08378093413609479,
+      "epoch_seconds": 21.507424354553223
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9954556599515224,
+        "slit/incision knife": 0.8217264207720746,
+        "gauge/cannula/spatula": 0.7124672068073171,
+        "phacoemulsifier tip": 0.7933389698825465,
+        "irrigation-aspiration": 0.8262198714339953,
+        "lens injector": 0.8306961654406766,
+        "forceps": 0.6155336044935116
+      },
+      "per_class_dice": {
+        "background": 0.9977226554617665,
+        "slit/incision knife": 0.9021403119616773,
+        "gauge/cannula/spatula": 0.8320944237357093,
+        "phacoemulsifier tip": 0.8847618695694832,
+        "irrigation-aspiration": 0.9048416177677729,
+        "lens injector": 0.9075194247109982,
+        "forceps": 0.762018942572833
+      },
+      "miou": 0.7993482712545206,
+      "mdice": 0.8844427493971772,
+      "epoch": 28,
+      "train_loss": 0.0822471823277218,
+      "epoch_seconds": 21.499816179275513
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9957399652949825,
+        "slit/incision knife": 0.8164064100987746,
+        "gauge/cannula/spatula": 0.7303328873088413,
+        "phacoemulsifier tip": 0.8204008016510479,
+        "irrigation-aspiration": 0.8528341949678524,
+        "lens injector": 0.848688762632415,
+        "forceps": 0.6564258943324244
+      },
+      "per_class_dice": {
+        "background": 0.997865435989108,
+        "slit/incision knife": 0.8989248282320025,
+        "gauge/cannula/spatula": 0.8441530443829409,
+        "phacoemulsifier tip": 0.9013408485724346,
+        "irrigation-aspiration": 0.9205725987614877,
+        "lens injector": 0.9181521300794151,
+        "forceps": 0.7925810585048578
+      },
+      "miou": 0.8172612737551912,
+      "mdice": 0.8962271349317495,
+      "epoch": 29,
+      "train_loss": 0.086123281358076,
+      "epoch_seconds": 21.507845163345337
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955947890956388,
+        "slit/incision knife": 0.8183962747953805,
+        "gauge/cannula/spatula": 0.7184383116498061,
+        "phacoemulsifier tip": 0.81748122652578,
+        "irrigation-aspiration": 0.8579712638546161,
+        "lens injector": 0.8320733754107273,
+        "forceps": 0.6498552610180517
+      },
+      "per_class_dice": {
+        "background": 0.9977925323675767,
+        "slit/incision knife": 0.9001297309492922,
+        "gauge/cannula/spatula": 0.8361525773480473,
+        "phacoemulsifier tip": 0.8995759786619006,
+        "irrigation-aspiration": 0.9235570867491644,
+        "lens injector": 0.9083406664585005,
+        "forceps": 0.7877724505567296
+      },
+      "miou": 0.8128300717642859,
+      "mdice": 0.8933315747273157,
+      "epoch": 30,
+      "train_loss": 0.07457978125395519,
+      "epoch_seconds": 21.486674785614014
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955349147838771,
+        "slit/incision knife": 0.8401712762703718,
+        "gauge/cannula/spatula": 0.7148778225464292,
+        "phacoemulsifier tip": 0.8130144500147449,
+        "irrigation-aspiration": 0.8424038494914784,
+        "lens injector": 0.8383106657122406,
+        "forceps": 0.6366799330764551
+      },
+      "per_class_dice": {
+        "background": 0.9977624619930008,
+        "slit/incision knife": 0.9131446481147307,
+        "gauge/cannula/spatula": 0.8337361567658553,
+        "phacoemulsifier tip": 0.8968648319467424,
+        "irrigation-aspiration": 0.9144616688941354,
+        "lens injector": 0.9120446085073907,
+        "forceps": 0.7780139784321698
+      },
+      "miou": 0.8115704159850853,
+      "mdice": 0.892289764950575,
+      "epoch": 31,
+      "train_loss": 0.06998193586644318,
+      "epoch_seconds": 21.482392072677612
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955793399333781,
+        "slit/incision knife": 0.8014739843765689,
+        "gauge/cannula/spatula": 0.7127137923054419,
+        "phacoemulsifier tip": 0.8318990890317102,
+        "irrigation-aspiration": 0.8656849968747325,
+        "lens injector": 0.8307306573314095,
+        "forceps": 0.6496731858282074
+      },
+      "per_class_dice": {
+        "background": 0.9977847735852139,
+        "slit/incision knife": 0.8897980113256343,
+        "gauge/cannula/spatula": 0.8322625712566668,
+        "phacoemulsifier tip": 0.9082368062876525,
+        "irrigation-aspiration": 0.9280076736693157,
+        "lens injector": 0.9075400075971152,
+        "forceps": 0.7876386564433893
+      },
+      "miou": 0.8125364350973499,
+      "mdice": 0.8930383571664269,
+      "epoch": 32,
+      "train_loss": 0.07656168631677117,
+      "epoch_seconds": 21.636855125427246
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9955962385915555,
+        "slit/incision knife": 0.81367472581237,
+        "gauge/cannula/spatula": 0.7165122808898099,
+        "phacoemulsifier tip": 0.8212934796670579,
+        "irrigation-aspiration": 0.8632382634072299,
+        "lens injector": 0.8447497909251804,
+        "forceps": 0.6373458654745022
+      },
+      "per_class_dice": {
+        "background": 0.9977932603182533,
+        "slit/incision knife": 0.8972664328747415,
+        "gauge/cannula/spatula": 0.8348466700376679,
+        "phacoemulsifier tip": 0.9018793388720578,
+        "irrigation-aspiration": 0.9265999742069061,
+        "lens injector": 0.9158421321750315,
+        "forceps": 0.7785109779353792
+      },
+      "miou": 0.813201520681101,
+      "mdice": 0.8932483980600053,
+      "epoch": 33,
+      "train_loss": 0.07429626191567097,
+      "epoch_seconds": 21.463271141052246
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9958344974000239,
+        "slit/incision knife": 0.831257125090683,
+        "gauge/cannula/spatula": 0.7385248922333052,
+        "phacoemulsifier tip": 0.8313851792209235,
+        "irrigation-aspiration": 0.8754815808364305,
+        "lens injector": 0.8487194904358963,
+        "forceps": 0.6635599622916514
+      },
+      "per_class_dice": {
+        "background": 0.9979129017935092,
+        "slit/incision knife": 0.9078540787105683,
+        "gauge/cannula/spatula": 0.8495994455214245,
+        "phacoemulsifier tip": 0.9079304437470627,
+        "irrigation-aspiration": 0.933607228972072,
+        "lens injector": 0.9181701116114515,
+        "forceps": 0.7977589955670231
+      },
+      "miou": 0.8263946753584162,
+      "mdice": 0.9018333151318731,
+      "epoch": 34,
+      "train_loss": 0.07363336536634181,
+      "epoch_seconds": 21.679263591766357
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9958048450852933,
+        "slit/incision knife": 0.8364135600380188,
+        "gauge/cannula/spatula": 0.7353464291756142,
+        "phacoemulsifier tip": 0.8324279656672035,
+        "irrigation-aspiration": 0.8744306553450903,
+        "lens injector": 0.8426993218145654,
+        "forceps": 0.6645152376440865
+      },
+      "per_class_dice": {
+        "background": 0.9978980134630712,
+        "slit/incision knife": 0.9109206969923515,
+        "gauge/cannula/spatula": 0.8474923701833351,
+        "phacoemulsifier tip": 0.9085519117408897,
+        "irrigation-aspiration": 0.9330093411048104,
+        "lens injector": 0.9146357323068119,
+        "forceps": 0.7984489689438048
+      },
+      "miou": 0.8259482878242675,
+      "mdice": 0.9015652906764392,
+      "epoch": 35,
+      "train_loss": 0.07325442381469267,
+      "epoch_seconds": 21.443222045898438
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9957830251758721,
+        "slit/incision knife": 0.8458006504687201,
+        "gauge/cannula/spatula": 0.728847121798021,
+        "phacoemulsifier tip": 0.8238137484397287,
+        "irrigation-aspiration": 0.8641725857836737,
+        "lens injector": 0.8491757193436669,
+        "forceps": 0.6603376637037817
+      },
+      "per_class_dice": {
+        "background": 0.9978870574752201,
+        "slit/incision knife": 0.9164593698175788,
+        "gauge/cannula/spatula": 0.8431597133238844,
+        "phacoemulsifier tip": 0.9033967960209761,
+        "irrigation-aspiration": 0.9271379617680483,
+        "lens injector": 0.918437020841986,
+        "forceps": 0.7954257475924987
+      },
+      "miou": 0.8239900735304949,
+      "mdice": 0.9002719524057418,
+      "epoch": 36,
+      "train_loss": 0.06915245757305197,
+      "epoch_seconds": 21.831697940826416
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9958040975733558,
+        "slit/incision knife": 0.8585548370352748,
+        "gauge/cannula/spatula": 0.7336177058010176,
+        "phacoemulsifier tip": 0.8218891430239914,
+        "irrigation-aspiration": 0.8596146215138135,
+        "lens injector": 0.8497199159504087,
+        "forceps": 0.657450446292167
+      },
+      "per_class_dice": {
+        "background": 0.9978976381340503,
+        "slit/incision knife": 0.9238950822724417,
+        "gauge/cannula/spatula": 0.8463431163008914,
+        "phacoemulsifier tip": 0.9022383674341579,
+        "irrigation-aspiration": 0.9245083487395328,
+        "lens injector": 0.9187552219372761,
+        "forceps": 0.7933274237705625
+      },
+      "miou": 0.8252358238842898,
+      "mdice": 0.9009950283698448,
+      "epoch": 37,
+      "train_loss": 0.07751205650025181,
+      "epoch_seconds": 21.60625720024109
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9958269375130868,
+        "slit/incision knife": 0.8494397458463916,
+        "gauge/cannula/spatula": 0.7304070990319775,
+        "phacoemulsifier tip": 0.8286525519382246,
+        "irrigation-aspiration": 0.8630399673708897,
+        "lens injector": 0.8492843368123189,
+        "forceps": 0.6502090474706554
+      },
+      "per_class_dice": {
+        "background": 0.9979091060409712,
+        "slit/incision knife": 0.9185914250562919,
+        "gauge/cannula/spatula": 0.8442026150269276,
+        "phacoemulsifier tip": 0.9062985213455881,
+        "irrigation-aspiration": 0.926485724929247,
+        "lens injector": 0.9185005462991833,
+        "forceps": 0.7880323386509825
+      },
+      "miou": 0.8238370979976491,
+      "mdice": 0.9000028967641702,
+      "epoch": 38,
+      "train_loss": 0.07373736236643579,
+      "epoch_seconds": 21.516435861587524
+    },
+    {
+      "per_class_iou": {
+        "background": 0.9957216497828784,
+        "slit/incision knife": 0.8386053350136526,
+        "gauge/cannula/spatula": 0.728702408332751,
+        "phacoemulsifier tip": 0.8263205611490194,
+        "irrigation-aspiration": 0.8622049251188001,
+        "lens injector": 0.8394127246171339,
+        "forceps": 0.649064007719524
+      },
+      "per_class_dice": {
+        "background": 0.9978562390112935,
+        "slit/incision knife": 0.9122189727654908,
+        "gauge/cannula/spatula": 0.8430628716894644,
+        "phacoemulsifier tip": 0.9049019966452597,
+        "irrigation-aspiration": 0.9260043440855956,
+        "lens injector": 0.9126964420579989,
+        "forceps": 0.7871907999703527
+      },
+      "miou": 0.8200045159619656,
+      "mdice": 0.8977045237464937,
+      "epoch": 39,
+      "train_loss": 0.07350975161950503,
+      "epoch_seconds": 21.55159330368042
+    }
+  ],
+  "provenance": {
+    "git_sha": "4dd462cc07f8446372dc7fe9e2e828fd91d3124f",
+    "git_dirty": false,
+    "seed": 0,
+    "world_size": 2
+  }
+}
