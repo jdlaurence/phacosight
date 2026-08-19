@@ -67,7 +67,9 @@ def probs_features(models: dict, batch: torch.Tensor) -> np.ndarray:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", choices=["cataract1k", "cataracts"], default="cataract1k")
     parser.add_argument("--phase-root", default="data/cataract1k/phase")
+    parser.add_argument("--cataracts-root", default="data/cataracts")
     parser.add_argument("--dino-cache", default="data/features/phase_dinov2l")
     parser.add_argument("--out", default="data/features/phase_tools")
     parser.add_argument("--map", default="TrainIDs_PhaseRecognition/seg_checkpoint_map.csv")
@@ -77,15 +79,27 @@ def main() -> None:
     args = parser.parse_args()
 
     device = torch.device("cuda")
-    ckpt_map = pd.read_csv(args.map)
     i, n = map(int, args.shard.split("/"))
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                          cwd=Path(__file__).parents[1]).stdout.strip()
 
+    from types import SimpleNamespace
+
+    if args.dataset == "cataracts":
+        # E7-prep: fold-0 zero-shot for every video (deployment convention); out-of-domain.
+        from phacosight.data.cataracts import cataracts_cases
+        rows = [SimpleNamespace(case=stem, seg_fold=0, overlap=False, video=video)
+                for stem, video, _, _ in cataracts_cases(args.cataracts_root)]
+    else:
+        ckpt_map = pd.read_csv(args.map)
+        rows = [SimpleNamespace(case=r.case, seg_fold=r.seg_fold, overlap=r.overlap,
+                                video=case_paths(args.phase_root, r.case)[0])
+                for r in ckpt_map.itertuples()]
+
     # group by fold so each checkpoint pair loads once
-    rows = list(ckpt_map.itertuples())[i::n]
+    rows = rows[i::n]
     by_fold: dict[int, list] = {}
     for r in rows:
         by_fold.setdefault(int(r.seg_fold), []).append(r)
@@ -100,8 +114,7 @@ def main() -> None:
                 continue
             t0 = time.time()
             times = np.load(Path(args.dino_cache) / f"{r.case}.npz")["times"]
-            video, _ = case_paths(args.phase_root, r.case)
-            cap = cv2.VideoCapture(str(video))
+            cap = cv2.VideoCapture(str(r.video))
             vfps = cap.get(cv2.CAP_PROP_FPS)
             want = np.round(times * vfps).astype(int)
             feats, buf = [], []
@@ -112,6 +125,11 @@ def main() -> None:
                 if not ok:
                     break
                 if idx == want[wi]:
+                    if args.dataset == "cataracts":  # pre-registered 4:3 center-crop
+                        fh, fw = frame.shape[:2]
+                        cw = (fh * 4) // 3
+                        x0 = (fw - cw) // 2
+                        frame = frame[:, x0:x0 + cw]
                     rgb = cv2.cvtColor(cv2.resize(frame, (args.size, args.size)),
                                        cv2.COLOR_BGR2RGB)
                     buf.append(torch.from_numpy(rgb))
