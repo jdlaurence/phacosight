@@ -25,6 +25,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from phacosight.data.cataracts import IGNORE_INDEX, cataracts_cases
+from phacosight.phase.data_io import load_case
 from phacosight.phase.decoding import mode_smooth, viterbi
 from phacosight.phase.heads import HEADS
 from phacosight.phase.metrics import (PhaseMetrics, edit_score, segments,
@@ -79,11 +80,7 @@ def main() -> None:
     agg = {d: PhaseMetrics(NUM_CLASSES, PHASES, fps=1.0) for d in decodings}
     per_video = []
     for stem, _, _, _ in cases:
-        d = np.load(Path(args.features) / f"{stem}.npz")
-        tools = np.load(Path(args.tools) / f"{stem}.npz")["features"]
-        x = np.concatenate([d["features"].astype(np.float32),
-                            tools.astype(np.float32)], axis=1)[::args.stride]
-        y = d["labels"].astype(np.int64)[::args.stride]
+        x, y = load_case(args.features, stem, [args.tools], args.stride)
         xt = torch.from_numpy(x).unsqueeze(0).to(device)
         probs = torch.stack([torch.softmax(h(xt)[-1, 0], -1) for h in heads]).mean(0)
         probs = torch.softmax(torch.log(probs + 1e-12) / TEMPERATURE, -1).cpu().numpy()

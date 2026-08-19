@@ -31,7 +31,8 @@ The experimentation plan (architectures, performance budget, experiment roadmap)
 - Download CATARACTS (IEEE DataPort open access, free account): paste presigned links into `data/cataracts/presigned_urls.txt`, then `python scripts/download_cataracts.py --extract` — see that script's docstring.
 - Class-ID conventions are codified in `src/phacosight/labels.py` — they mirror the upstream mask scripts exactly (note: multiclass instruments = 10 tools grouped into 6 classes).
 - `src/phacosight/data/folds.py` remaps the committed fold CSVs' cluster/relative paths to a local data root; `data_root` in configs points at the local `Images_and_Supervisely_Annotations` directory.
-- EfficientViT and PIDNet candidates need extra setup (pip git install / vendoring into `third_party/`) — see `src/phacosight/models/segmentation.py` docstring.
+- Segmentation models are SegFormer-only (bake-off winner; losing candidates and their vendored code were removed in the post-E7 simplification — recover from git history if ever needed).
+- Shared phase-script I/O (stride-aware cache loading, ensemble rate checks) lives in `src/phacosight/phase/data_io.py` — never load cached features without applying the checkpoint's `frame_stride` (2026-08-14 incident class).
 
 ## The Cataract-1K dataset (upstream contents)
 

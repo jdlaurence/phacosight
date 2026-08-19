@@ -20,31 +20,11 @@ import pandas as pd
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from phacosight.phase.data_io import load_case, run_stride
 from phacosight.phase.decoding import transition_matrix, viterbi
 from phacosight.phase.heads import HEADS
 from phacosight.phase.metrics import PhaseMetrics, segments
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
-
-
-def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = (), stride: int = 1):
-    d = np.load(feat_dir / f"{case}.npz")
-    feats = [d["features"].astype(np.float32)]
-    for e in extra_dirs:
-        feats.append(np.load(Path(e) / f"{case}.npz")["features"].astype(np.float32))
-    # stride from the checkpoints: 1 fps heads fed 5 fps sequences silently collapse
-    return np.concatenate(feats, axis=1)[::stride], d["labels"].astype(np.int64)[::stride]
-
-
-def run_stride(run_dirs) -> tuple[int, float]:
-    """(frame_stride, effective fps) shared by all runs — mixed-rate ensembles are a bug."""
-    seen = set()
-    for rd in run_dirs:
-        cfg = torch.load(Path(rd) / "fold0" / "val_best.pt",
-                         map_location="cpu", weights_only=False)["config"]
-        seen.add((int(cfg.get("frame_stride", 1)), float(cfg.get("features_fps", 5.0))))
-    assert len(seen) == 1, f"runs disagree on stride/fps: {seen}"
-    stride, ffps = seen.pop()
-    return stride, ffps / stride
 
 
 @torch.no_grad()

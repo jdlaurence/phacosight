@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Train a temporal head on cached phase features. One (config, fold) per run.
 
-    python scripts/train_phase.py --config configs/phase_mstcnpp.yaml --fold 0
+    python scripts/train_phase.py --config configs/phase_mstcnpp_tools_1fps_aug_seed0.yaml --fold 0
 
 Full-video sequences, batch of one video. Checkpoint selection on the VAL
 split (never test); test is evaluated once at the end with the val-best and
@@ -21,6 +21,7 @@ import torch
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from phacosight.phase.data_io import load_case
 from phacosight.phase.heads import HEADS, mstcn_loss
 from phacosight.phase.metrics import PhaseMetrics
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
@@ -32,16 +33,7 @@ def load_split(split_dir: Path, fold: int, name: str) -> list[str]:
 
 def load_features(feat_dir: Path, cases: list[str], extra_dirs: list[Path],
                   stride: int = 1) -> dict:
-    out = {}
-    for c in cases:
-        d = np.load(feat_dir / f"{c}.npz")
-        feats = [d["features"].astype(np.float32)]
-        for e in extra_dirs:
-            x = np.load(e / f"{c}.npz")["features"].astype(np.float32)
-            assert len(x) == len(feats[0]), f"{c}: extra feature length mismatch"
-            feats.append(x)
-        out[c] = (np.concatenate(feats, axis=1)[::stride], d["labels"].astype(np.int64)[::stride])
-    return out
+    return {c: load_case(feat_dir, c, extra_dirs, stride) for c in cases}
 
 
 def class_weights(data: dict, cases: list[str]) -> torch.Tensor:

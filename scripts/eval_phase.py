@@ -19,21 +19,12 @@ import pandas as pd
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from phacosight.phase.data_io import load_case
 from phacosight.phase.decoding import mode_smooth, transition_matrix, viterbi
 from phacosight.phase.heads import HEADS
 from phacosight.phase.metrics import (PhaseMetrics, edit_score, segments,
                                       video_f1_at_50, video_macro_f1)
 from phacosight.phase.timeline import NUM_CLASSES, PHASES
-
-
-def load_case(feat_dir: Path, case: str, extra_dirs: list[Path] = (), stride: int = 1):
-    d = np.load(feat_dir / f"{case}.npz")
-    feats = [d["features"].astype(np.float32)]
-    for e in extra_dirs:
-        feats.append(np.load(Path(e) / f"{case}.npz")["features"].astype(np.float32))
-    # frame_stride matters: 1 fps heads fed 5 fps sequences silently collapse
-    # (MS-TCN++ receptive fields are in samples — the 2026-08-14 incident class)
-    return np.concatenate(feats, axis=1)[::stride], d["labels"].astype(np.int64)[::stride]
 
 
 @torch.no_grad()
