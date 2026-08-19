@@ -92,6 +92,15 @@ async function renderList() {
   view.append(el("h1", "", "Surgeries"));
   view.append(el("p", "sub",
     "Every analyzed surgery, with automated quality flags. Click a row to review."));
+  try {
+    const active = (await api("/api/jobs")).filter(j => !["done", "error"].includes(j.status));
+    if (active.length) {
+      const b = el("a", "banner",
+        `⏳ ${active.length} analys${active.length === 1 ? "is" : "es"} running — view queue`);
+      b.href = "#/upload";
+      view.append(b);
+    }
+  } catch { /* banner is best-effort */ }
   const stats = el("div", "stats");
   for (const [b, s] of [[n, "surgeries analyzed"], [hours.toFixed(0) + " h", "video indexed"],
                         [flagged, "need manual review"], [uploaded, "uploaded by you"]]) {
@@ -193,21 +202,39 @@ async function renderDetail(caseId, params) {
   titleWrap.append(el("h1", "", esc(caseId)));
   const sub = d.metrics
     ? `Automated timeline · ${d.metrics.n_segments} segments · median confidence
-       ${d.metrics.median_confidence.toFixed(2)} ${d.ground_truth ? "· expert annotations available" : ""}`
+       ${d.metrics.median_confidence.toFixed(2)} ${d.ground_truth ? "· expert annotations available" : ""}
+       ${d.operator ? `· operator: <b>${esc(d.operator)}</b>` : ""}`
     : "Expert annotations only (not model-analyzed)";
   titleWrap.append(el("p", "sub", sub));
   head.append(titleWrap);
+  const nav = el("div", "case-nav");
+  head.append(nav);
   try {
     const order = (lastListOrder && lastListOrder.includes(caseId))
       ? lastListOrder : (await getVideos()).map(v => v.case).sort();
     const i = order.indexOf(caseId);
-    const nav = el("div", "case-nav");
     if (i > 0) nav.append(Object.assign(el("a", "ghost-link",
       `← ${esc(order[i - 1])}`), {href: `#/video/${encodeURIComponent(order[i - 1])}`}));
     if (i >= 0 && i < order.length - 1) nav.append(Object.assign(el("a", "ghost-link",
       `${esc(order[i + 1])} →`), {href: `#/video/${encodeURIComponent(order[i + 1])}`}));
-    head.append(nav);
-  } catch { /* nav is optional */ }
+  } catch { /* prev/next is optional */ }
+  if (d.source === "uploaded") {
+    const re = el("button", "ghost", "Re-analyze");
+    re.onclick = async () => {
+      re.disabled = true;
+      const r = await fetch(`/api/reanalyze/${encodeURIComponent(caseId)}`, {method: "POST"});
+      if (r.ok) location.hash = "#/upload";
+      else { re.disabled = false; alert(`Re-analyze failed: ${await r.text()}`); }
+    };
+    const del = el("button", "ghost danger", "Delete");
+    del.onclick = async () => {
+      if (!confirm(`Delete ${caseId} — its video and analysis? This cannot be undone.`)) return;
+      const r = await fetch(`/api/videos/${encodeURIComponent(caseId)}`, {method: "DELETE"});
+      if (r.ok) { invalidateVideos(); location.hash = "#/surgeries"; }
+      else alert(`Delete failed: ${await r.text()}`);
+    };
+    nav.append(re, del);
+  }
   view.append(head);
 
   const grid = el("div", "detail-grid");
@@ -491,6 +518,9 @@ function renderUpload() {
   const input = el("input"); input.type = "file"; input.accept = "video/mp4";
   const doc = el("input"); doc.type = "text"; doc.placeholder = "e.g. Dr. Rivera";
   const date = el("input"); date.type = "date";
+  const op = el("select", "", `<option value="">not specified</option>
+    <option value="resident">resident</option><option value="attending">attending</option>
+    <option value="mixed">mixed (hand-offs)</option>`);
   const fileF = el("label", "field", "Recording (mp4)");
   fileF.append(input);
   const docF = el("label", "field",
@@ -498,35 +528,108 @@ function renderUpload() {
   docF.append(doc);
   const dateF = el("label", "field", "Surgery date");
   dateF.append(date);
+  const opF = el("label", "field",
+    "Operator <span class='sub' style='margin:0'>(who performed the surgery)</span>");
+  opF.append(op);
   const go = el("button", "", "Upload & analyze");
+  const msg = el("p", "form-msg"); msg.hidden = true;
   const prog = el("div", "progress"); prog.hidden = true;
   prog.innerHTML = `<div class="bar"><i style="width:0%"></i></div><p></p>`;
-  box.append(fileF, docF, dateF, go, prog);
+  box.append(fileF, docF, dateF, opF, go, msg, prog);
   view.append(box);
 
-  go.onclick = async () => {
-    if (!input.files.length) return alert("Choose an mp4 first.");
-    go.disabled = true; prog.hidden = false;
+  const showMsg = t => { msg.hidden = false; msg.textContent = t; };
+  const setBar = (pct, text) => {
+    prog.hidden = false;
+    prog.querySelector("i").style.width = `${pct.toFixed(0)}%`;
+    prog.querySelector("p").textContent = text;
+  };
+
+  /* stages after the transfer itself (0-70%) */
+  const stages = {queued: 72, loading: 78, features: 86, inference: 94, done: 100};
+  const pollJob = (jobId, caseId) => {
+    let delay = 1500;
+    const goDetail = () => {
+      invalidateVideos();
+      location.hash = `#/video/${encodeURIComponent(caseId)}`;
+    };
+    const tick = async () => {
+      if (!document.body.contains(prog)) return;   // navigated away
+      try {
+        const j = await api(`/api/jobs/${jobId}`);
+        delay = 1500;
+        setBar(stages[j.status] ?? 72, `${j.status} — ${j.detail}`);
+        if (j.status === "done") return goDetail();
+        if (j.status === "error") {
+          showMsg(`Analysis failed: ${j.detail}`); go.disabled = false; return;
+        }
+      } catch (e) {
+        if (String(e.message).startsWith("404")) {
+          /* server restarted and lost the job — did the timeline land anyway? */
+          try { await api(`/api/videos/${encodeURIComponent(caseId)}`); return goDetail(); }
+          catch {
+            showMsg("The server restarted and lost this job — re-upload if the analysis "
+              + "didn't finish."); go.disabled = false; return;
+          }
+        }
+        delay = Math.min(delay * 2, 10_000);       // transient failure: back off
+      }
+      setTimeout(tick, delay);
+    };
+    setTimeout(tick, delay);
+  };
+
+  go.onclick = () => {
+    if (!input.files.length) return showMsg("Choose an mp4 first.");
+    msg.hidden = true; go.disabled = true;
     const fd = new FormData(); fd.append("file", input.files[0]);
     fd.append("physician", doc.value); fd.append("surgery_date", date.value);
-    prog.querySelector("p").textContent = "Uploading…";
-    prog.querySelector("i").style.width = "10%";
-    const r = await fetch("/api/upload", {method: "POST", body: fd});
-    if (!r.ok) { prog.querySelector("p").textContent = "Upload failed: " + await r.text();
-      go.disabled = false; return; }
-    const {job_id, case: caseId} = await r.json();
-    const stages = {queued: 20, loading: 35, features: 60, inference: 85, done: 100};
-    const poll = setInterval(async () => {
-      const j = await api(`/api/jobs/${job_id}`);
-      prog.querySelector("i").style.width = `${stages[j.status] ?? 15}%`;
-      prog.querySelector("p").textContent = `${j.status} — ${j.detail}`;
-      if (j.status === "done") {
-        clearInterval(poll); invalidateVideos();
-        location.hash = `#/video/${encodeURIComponent(caseId)}`;
+    fd.append("operator", op.value);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload");
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) setBar(70 * e.loaded / e.total,
+        `uploading — ${(e.loaded / 1e6).toFixed(0)} / ${(e.total / 1e6).toFixed(0)} MB`);
+    };
+    xhr.onerror = () => { showMsg("Upload failed — network error."); go.disabled = false; };
+    xhr.onload = () => {
+      if (xhr.status !== 200) {
+        showMsg(`Upload failed: ${xhr.responseText}`); go.disabled = false; return;
       }
-      if (j.status === "error") { clearInterval(poll); go.disabled = false; }
-    }, 1500);
+      setBar(70, "upload complete — queued for analysis");
+      const {job_id, case: caseId} = JSON.parse(xhr.responseText);
+      pollJob(job_id, caseId);
+    };
+    xhr.send(fd);
   };
+
+  /* recent analyses (in-memory queue on the server) */
+  const jobsCard = el("div", "card panel jobs-card");
+  view.append(jobsCard);
+  const drawJobs = async () => {
+    if (!document.body.contains(jobsCard)) return;  // navigated away
+    try {
+      const js = await api("/api/jobs");
+      jobsCard.innerHTML = "<h2>Recent analyses</h2>";
+      if (!js.length) {
+        jobsCard.append(el("p", "sub",
+          "None since the server started. Finished analyses live under Surgeries."));
+      } else {
+        const ul = el("ul", "jobs");
+        for (const j of js) {
+          const chip = {done: "ok", error: "warn"}[j.status] || "neutral";
+          const name = j.status === "done"
+            ? `<a href="#/video/${encodeURIComponent(j.case)}">${esc(j.case)}</a>`
+            : `<b>${esc(j.case)}</b>`;
+          ul.append(el("li", "", `<span class='chip ${chip}'>${esc(j.status)}</span>
+            ${name} <span class='sub' style='margin:0'>${esc(j.detail)}</span>`));
+        }
+        jobsCard.append(ul);
+      }
+    } catch { /* jobs list is best-effort */ }
+    setTimeout(drawJobs, 5000);
+  };
+  drawJobs();
 }
 
 /* ---------------- shared mini-charts ---------------- */

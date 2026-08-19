@@ -62,6 +62,12 @@ class InferenceService:
             self._queue.append(job_id)
             self.jobs[job_id]["path"] = str(video_path)
             self.jobs[job_id]["meta"] = meta or {}
+            if len(self.jobs) > 200:  # bound memory: drop oldest finished jobs
+                done = sorted((j for j in self.jobs.values()
+                               if j["status"] in ("done", "error")),
+                              key=lambda j: j["submitted"])
+                for j in done[:len(self.jobs) - 200]:
+                    del self.jobs[j["id"]]
         return job_id
 
     def _ensure_stack(self):
@@ -130,6 +136,7 @@ class InferenceService:
             "inference_fps": INFERENCE_FPS, "segments": segs, "source": "uploaded",
             "physician": job["meta"].get("physician") or None,
             "surgery_date": job["meta"].get("surgery_date") or None,
+            "operator": job["meta"].get("operator") or None,
             "uploaded_at": time.strftime("%Y-%m-%d"),
             "provenance": {"git_sha": sha, "device": str(device),
                            "stack": f"tools-fusion x 12-member ensemble, T={TEMPERATURE}, "

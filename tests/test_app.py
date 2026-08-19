@@ -132,6 +132,34 @@ def test_phase_stats(app_env):
                       params={"phase": "Lens Implantation"}).status_code == 404
 
 
+def test_upload_and_jobs_queue(app_env):
+    client, server, _ = app_env
+    r = client.post("/api/upload",
+                    files={"file": ("my video<x>.mp4", b"\x00" * 64, "video/mp4")},
+                    data={"physician": "Dr. Test", "surgery_date": "2026-08-19",
+                          "operator": "resident"})
+    assert r.status_code == 200
+    case = r.json()["case"]
+    assert server.CASE_RE.fullmatch(case)                 # hostile stem sanitized
+    jobs = client.get("/api/jobs").json()
+    assert jobs and jobs[0]["case"] == case and jobs[0]["status"] == "queued"
+    assert "path" not in jobs[0] and "meta" not in jobs[0]
+    assert client.post("/api/upload",
+                       files={"file": ("x.mov", b"\x00", "video/mp4")}).status_code == 400
+
+
+def test_delete_and_reanalyze_upload_only(app_env):
+    client, _, tldir = app_env
+    # library cases are protected
+    assert client.delete("/api/videos/case_clean").status_code == 403
+    assert client.post("/api/reanalyze/case_clean").status_code == 403
+    # uploaded case with its mp4 gone: reanalyze 404s, delete succeeds
+    assert client.post("/api/reanalyze/case_upload").status_code == 404
+    assert client.delete("/api/videos/case_upload").status_code == 200
+    assert not (tldir / "case_upload.json").exists()
+    assert client.get("/api/videos/case_upload").status_code == 404
+
+
 def test_norms_rebuild_picks_up_new_timeline(app_env):
     client, server, tldir = app_env
     (tldir / "case_new.json").write_text(json.dumps(

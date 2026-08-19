@@ -179,6 +179,20 @@ tr.show-all:hover td { background: var(--accent-soft); }
   align-items: center; }
 .prog-card h3 a.ph-link:hover { color: var(--accent-ink); }
 
+/* ---------- upload extras ---------- */
+.form-msg { font-size: 13.5px; color: var(--warn); margin: 12px 0 0; }
+.jobs-card { max-width: 560px; margin-top: 18px; }
+ul.jobs { list-style: none; margin: 8px 0 0; padding: 0; }
+ul.jobs li { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px;
+  padding: 6px 0; border-bottom: 1px dashed var(--line); }
+ul.jobs li:last-child { border-bottom: 0; }
+ul.jobs a { color: var(--accent-ink); font-weight: 600; text-decoration: none; }
+a.banner { display: block; background: var(--accent-soft); color: var(--accent-ink);
+  font-size: 13.5px; font-weight: 600; padding: 10px 16px; border-radius: 8px;
+  border: 1px solid var(--accent); margin-bottom: 16px; text-decoration: none; }
+button.danger { color: var(--warn); border-color: var(--warn); }
+button.danger:hover { background: var(--warn-soft); }
+
 /* ---------- tooltip ---------- */
 .tooltip { position: fixed; z-index: 50; background: var(--ink); color: #fff;
   font-size: 12.5px; padding: 7px 10px; border-radius: 7px; pointer-events: none;

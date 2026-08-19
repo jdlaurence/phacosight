@@ -427,10 +427,11 @@ def stream(case: str, request: Request):
 
 
 @app.post("/api/upload")
-async def upload(file: UploadFile, physician: str = Form(""), surgery_date: str = Form("")):
+async def upload(file: UploadFile, physician: str = Form(""), surgery_date: str = Form(""),
+                 operator: str = Form("")):
     if not file.filename.lower().endswith(".mp4"):
         raise HTTPException(400, "mp4 only")
-    stem = Path(file.filename).stem.replace(" ", "_")
+    stem = re.sub(r"[^A-Za-z0-9._-]", "_", Path(file.filename).stem)[:60] or "upload"
     dest = UPLOAD_DIR / f"{stem}.mp4"
     i = 1
     while dest.exists():
@@ -439,8 +440,19 @@ async def upload(file: UploadFile, physician: str = Form(""), surgery_date: str 
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
     job_id = service.submit(dest, {"physician": physician.strip(),
-                                   "surgery_date": surgery_date.strip()})
+                                   "surgery_date": surgery_date.strip(),
+                                   "operator": operator.strip()})
     return {"job_id": job_id, "case": dest.stem}
+
+
+def public_job(j: dict) -> dict:
+    return {k: v for k, v in j.items() if k not in ("path", "meta")}
+
+
+@app.get("/api/jobs")
+def jobs_list():
+    js = sorted(service.jobs.values(), key=lambda j: -j["submitted"])
+    return [public_job(j) for j in js[:50]]
 
 
 @app.get("/api/jobs/{job_id}")
@@ -448,7 +460,32 @@ def job(job_id: str):
     j = service.jobs.get(job_id)
     if not j:
         raise HTTPException(404, "unknown job")
-    return {k: v for k, v in j.items() if k not in ("path", "meta")}
+    return public_job(j)
+
+
+@app.delete("/api/videos/{case}")
+def delete_video(case: str):
+    d = load_timeline(case)
+    if d.get("source") != "uploaded":
+        raise HTTPException(403, "only uploaded videos can be deleted")
+    (TIMELINE_DIR / f"{case}.json").unlink(missing_ok=True)
+    (UPLOAD_DIR / f"{case}.mp4").unlink(missing_ok=True)
+    rebuild_norms()  # uploads never contribute, but this also refreshes the list cache
+    return {"deleted": case}
+
+
+@app.post("/api/reanalyze/{case}")
+def reanalyze(case: str):
+    d = load_timeline(case)
+    if d.get("source") != "uploaded":
+        raise HTTPException(403, "only uploaded videos can be re-analyzed")
+    p = UPLOAD_DIR / f"{case}.mp4"
+    if not p.exists():
+        raise HTTPException(404, "original upload file is gone")
+    job_id = service.submit(p, {"physician": d.get("physician") or "",
+                                "surgery_date": d.get("surgery_date") or "",
+                                "operator": d.get("operator") or ""})
+    return {"job_id": job_id, "case": case}
 
 
 app.mount("/", StaticFiles(directory=Path(__file__).parent / "static", html=True))
