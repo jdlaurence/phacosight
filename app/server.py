@@ -6,11 +6,14 @@ Run: `python -m app`  (see app/__main__.py for options)
 """
 
 import json
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 
 import cv2
@@ -26,14 +29,22 @@ sys.path.insert(0, str(REPO / "src"))
 from phacosight.phase.timeline import PHASES, case_paths, load_segments, phase_cases  # noqa: E402
 
 CLIP_CACHE = Path(tempfile.gettempdir()) / "phacosight_clips"
+CLIP_CACHE_MAX_BYTES = 2 * 2**30
 FLAG = {"conf": 0.7, "dis": 0.5}
+CASE_RE = re.compile(r"[A-Za-z0-9._-]{1,80}")
 
 app = FastAPI(title="PhacoSight")
-service = InferenceService()
 
 
 # ---------------------------------------------------------------- data access
+def safe_case(case: str) -> str:
+    if not CASE_RE.fullmatch(case) or ".." in case:
+        raise HTTPException(400, "invalid case name")
+    return case
+
+
 def video_path(case: str) -> Path:
+    safe_case(case)
     for p in (FULL_DIR / f"{case}.mp4", PHASE_DIR / "videos" / f"{case}.mp4",
               UPLOAD_DIR / f"{case}.mp4"):
         if p.exists():
@@ -41,18 +52,66 @@ def video_path(case: str) -> Path:
     raise HTTPException(404, f"no video file for {case}")
 
 
+class TimelineCache:
+    """Mtime-keyed cache of TIMELINE_DIR — list endpoints and norms would
+    otherwise re-parse every timeline JSON per request, and one malformed
+    upload would 500 all of them."""
+
+    REQUIRED = {"case", "duration_s", "segments"}
+
+    def __init__(self):
+        self._entries: dict[str, tuple[float, dict]] = {}
+        self._bad: set[str] = set()
+        self._lock = threading.Lock()
+
+    def all(self) -> list[dict]:
+        with self._lock:
+            seen = set()
+            for f in TIMELINE_DIR.glob("*.json"):
+                seen.add(f.name)
+                mtime = f.stat().st_mtime
+                hit = self._entries.get(f.name)
+                if hit and hit[0] == mtime:
+                    continue
+                try:
+                    d = json.loads(f.read_text())
+                    missing = self.REQUIRED - d.keys()
+                    if missing:
+                        raise ValueError(f"missing keys {sorted(missing)}")
+                except (ValueError, OSError) as e:
+                    self._entries.pop(f.name, None)
+                    if f.name not in self._bad:
+                        print(f"[app] skipping malformed timeline {f.name}: {e}")
+                        self._bad.add(f.name)
+                    continue
+                self._bad.discard(f.name)
+                self._entries[f.name] = (mtime, d)
+            for name in set(self._entries) - seen:
+                del self._entries[name]
+            return [d for _, (_, d) in sorted(self._entries.items())]
+
+
+timelines = TimelineCache()
+
+
 def load_timeline(case: str) -> dict:
+    safe_case(case)
     p = TIMELINE_DIR / f"{case}.json"
     if not p.exists():
         raise HTTPException(404, f"{case} not analyzed")
-    return json.loads(p.read_text())
+    try:
+        return json.loads(p.read_text())
+    except ValueError:
+        raise HTTPException(500, f"timeline for {case} is malformed")
 
 
 def labeled_cases() -> list[str]:
     return phase_cases(PHASE_DIR) if (PHASE_DIR / "annotations").exists() else []
 
 
+@lru_cache(maxsize=None)  # expert GT CSVs are a static dataset
 def labeled_gt(case: str) -> list | None:
+    safe_case(case)
     ann = PHASE_DIR / "annotations" / case / f"{case}_annotations_phases.csv"
     if not ann.exists():
         return None
@@ -76,6 +135,8 @@ class Norms:
 
         for c in labeled_cases():
             gt = labeled_gt(c)
+            if not gt:  # case listed but CSV missing/empty
+                continue
             self.n_videos += 1
             end = max(s["end_s"] for s in gt)
             totals, first = defaultdict(float), {}
@@ -92,8 +153,7 @@ class Norms:
         if NORMS_PATH.exists():
             quarantined = set(json.loads(NORMS_PATH.read_text())
                               ["provenance"]["bulk_quarantined"])
-        for f in TIMELINE_DIR.glob("*.json"):
-            d = json.loads(f.read_text())
+        for d in timelines.all():
             if d["case"] in quarantined or d.get("source") == "uploaded":
                 continue
             self.n_videos += 1
@@ -118,6 +178,17 @@ class Norms:
 
 
 norms = Norms()
+_norms_lock = threading.Lock()
+
+
+def rebuild_norms():
+    """Refresh cohort norms after new analyses land (worker on_done hook)."""
+    global norms
+    with _norms_lock:
+        norms = Norms()
+
+
+service = InferenceService(on_done=rebuild_norms)
 
 
 def video_metrics(d: dict) -> dict:
@@ -158,8 +229,7 @@ def video_metrics(d: dict) -> dict:
 @app.get("/api/videos")
 def list_videos():
     out = []
-    for f in sorted(TIMELINE_DIR.glob("*.json")):
-        d = json.loads(f.read_text())
+    for d in timelines.all():
         action = [s for s in d["segments"] if s["phase"] != "idle"]
         n_flag = sum(1 for s in action if s["confidence"] < FLAG["conf"]
                      or s["disagreement"] > FLAG["dis"])
@@ -194,6 +264,11 @@ def get_video(case: str):
     d["metrics"] = video_metrics(d) if d["segments"] else None
     d["ground_truth"] = labeled_gt(case)
     d["phase_names"] = list(PHASES)
+    try:
+        video_path(case)
+        d["has_video"] = True
+    except HTTPException:
+        d["has_video"] = False
     return d
 
 
@@ -221,19 +296,21 @@ def phase_stats(phase: str):
 
 @app.get("/api/physicians")
 def physicians():
-    seen = defaultdict(int)
-    for f in TIMELINE_DIR.glob("*.json"):
-        d = json.loads(f.read_text())
+    seen = defaultdict(lambda: {"n_videos": 0, "last_date": None})
+    for d in timelines.all():
         if d.get("physician"):
-            seen[d["physician"]] += 1
-    return [{"name": k, "n_videos": v} for k, v in sorted(seen.items())]
+            e = seen[d["physician"]]
+            e["n_videos"] += 1
+            date = d.get("surgery_date") or d.get("uploaded_at")
+            if date and (e["last_date"] is None or date > e["last_date"]):
+                e["last_date"] = date
+    return [{"name": k, **v} for k, v in sorted(seen.items())]
 
 
 @app.get("/api/progress")
 def progress(physician: str):
     rows = []
-    for f in TIMELINE_DIR.glob("*.json"):
-        d = json.loads(f.read_text())
+    for d in timelines.all():
         if d.get("physician") != physician:
             continue
         m = video_metrics(d)
@@ -257,7 +334,11 @@ def progress(physician: str):
 @app.get("/api/frame")
 def frame(case: str, t: float, h: int = 240):
     cap = cv2.VideoCapture(str(video_path(case)))
-    cap.set(cv2.CAP_PROP_POS_FRAMES, int(t * cap.get(cv2.CAP_PROP_FPS)))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not cap.isOpened() or fps <= 0:
+        cap.release()
+        raise HTTPException(415, f"unreadable video for {case}")
+    cap.set(cv2.CAP_PROP_POS_FRAMES, int(t * fps))
     ok, img = cap.read()
     cap.release()
     if not ok:
@@ -272,13 +353,26 @@ def frame(case: str, t: float, h: int = 240):
 @app.get("/api/search")
 def search(phase: str, min_conf: float = 0.9, limit: int = 60):
     hits = []
-    for f in sorted(TIMELINE_DIR.glob("*.json")):
-        d = json.loads(f.read_text())
+    for d in timelines.all():
         for s in d["segments"]:
-            if s["phase"] == phase and s["confidence"] >= min_conf:
+            # flagged segments (low confidence OR member disagreement) are
+            # excluded, matching the UI copy and isFlagged() in app.js
+            if (s["phase"] == phase and s.get("confidence", 0) >= min_conf
+                    and s.get("confidence", 0) >= FLAG["conf"]
+                    and s.get("disagreement", 1) <= FLAG["dis"]):
                 hits.append({"case": d["case"], **s})
     hits.sort(key=lambda s: -s["confidence"])
     return {"total": len(hits), "hits": hits[:limit]}
+
+
+def evict_cache(cache_dir: Path, max_bytes: int):
+    files = sorted(cache_dir.glob("*"), key=lambda p: p.stat().st_mtime)
+    total = sum(p.stat().st_size for p in files)
+    for p in files:
+        if total <= max_bytes:
+            break
+        total -= p.stat().st_size
+        p.unlink(missing_ok=True)
 
 
 @app.get("/api/clip")
@@ -288,12 +382,18 @@ def clip(case: str, start: float, end: float):
     CLIP_CACHE.mkdir(exist_ok=True)
     out = CLIP_CACHE / f"{case}_{start:.1f}_{end:.1f}.mp4"
     if not out.exists():
-        r = subprocess.run(
-            ["ffmpeg", "-y", "-ss", str(start), "-to", str(end), "-i",
-             str(video_path(case)), "-c", "copy", str(out)],
-            capture_output=True, timeout=60)
+        try:
+            r = subprocess.run(
+                ["ffmpeg", "-y", "-ss", str(start), "-to", str(end), "-i",
+                 str(video_path(case)), "-c", "copy", str(out)],
+                capture_output=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            out.unlink(missing_ok=True)
+            raise HTTPException(504, "clip extraction timed out")
         if r.returncode != 0:
+            out.unlink(missing_ok=True)
             raise HTTPException(500, "ffmpeg failed")
+        evict_cache(CLIP_CACHE, CLIP_CACHE_MAX_BYTES)
     return FileResponse(out, media_type="video/mp4", filename=f"{case}_{start:.0f}s.mp4")
 
 

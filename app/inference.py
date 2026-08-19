@@ -18,6 +18,7 @@ interface and POST the resulting timeline JSON back.
 """
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -41,14 +42,17 @@ from phacosight.phase.timeline import PHASES  # noqa: E402
 
 
 class InferenceService:
-    def __init__(self):
+    def __init__(self, on_done=None):
         self.jobs: dict[str, dict] = {}
+        self._on_done = on_done  # called after each timeline write (norms refresh)
         self._lock = threading.Lock()
         self._queue: list[str] = []
         self._stack = None
         self._log_trans = np.load(ASSETS / "transition_matrix_1fps.npy")
         self._worker = threading.Thread(target=self._run, daemon=True)
-        self._worker.start()
+        # PHACOSIGHT_NO_WORKER=1: serve browse-only (tests, CPU-only demos)
+        if not os.environ.get("PHACOSIGHT_NO_WORKER"):
+            self._worker.start()
 
     def submit(self, video_path: Path, meta: dict | None = None) -> str:
         job_id = uuid.uuid4().hex[:12]
@@ -133,3 +137,8 @@ class InferenceService:
         }
         (TIMELINE_DIR / f"{video.stem}.json").write_text(json.dumps(out, indent=1))
         job["result_case"] = video.stem
+        if self._on_done is not None:
+            try:
+                self._on_done()
+            except Exception as e:  # a refresh failure must not fail the job
+                print(f"[inference] on_done callback failed: {e}")
