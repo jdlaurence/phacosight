@@ -47,7 +47,12 @@ git clone https://github.com/jdlaurence/phacosight.git && cd phacosight
 python -m venv .venv
 .venv/bin/pip install -e ".[dev,app]"        # add [gpu] on a CUDA machine, [data] for downloads
 .venv/bin/python -m pytest tests/ -q         # smoke tests, no data required
+.venv/bin/python scripts/download_weights.py # trained checkpoints (~260 MB) → runs/
 ```
+
+The last step fetches the deployment model weights (checksummed against
+`configs/weights_manifest.json`) — required to analyze videos (web-app uploads or
+`scripts/analyze_phase_bulk.py`), not for browsing, training, or tests.
 
 Download the datasets (requires a [Synapse](https://www.synapse.org) account and
 `SYNAPSE_AUTH_TOKEN`):

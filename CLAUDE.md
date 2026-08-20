@@ -32,6 +32,7 @@ The experimentation plan (architectures, performance budget, experiment roadmap)
 - Class-ID conventions are codified in `src/phacosight/labels.py` — they mirror the upstream mask scripts exactly (note: multiclass instruments = 10 tools grouped into 6 classes).
 - `src/phacosight/data/folds.py` remaps the committed fold CSVs' cluster/relative paths to a local data root; `data_root` in configs points at the local `Images_and_Supervisely_Annotations` directory.
 - Committed splits: upstream Cataract-1K segmentation splits live under `upstream/TrainIDs_*/`; project-generated phase splits (plus `seg_checkpoint_map.csv`) live in `splits/phase/` (written by `scripts/make_phase_splits.py`).
+- Deployment checkpoints are distributed via `scripts/download_weights.py`, verified against the committed `configs/weights_manifest.json`. If the deployment stack changes (`DEPLOY_CHECKPOINTS` in `scripts/analyze_phase_bulk.py`), regenerate with `--make-manifest` and re-upload the weights to the manifest's `base_url`.
 - Segmentation models are SegFormer-only (bake-off winner; losing candidates and their vendored code were removed in the post-E7 simplification — recover from git history if ever needed).
 - Shared phase-script I/O (stride-aware cache loading, ensemble rate checks) lives in `src/phacosight/phase/data_io.py` — never load cached features without applying the checkpoint's `frame_stride` (2026-08-14 incident class).
 

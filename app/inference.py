@@ -37,6 +37,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 from analyze_phase_bulk import (  # noqa: E402
     INFERENCE_FPS, TEMPERATURE, load_stack, self_check, video_features,
 )
+from download_weights import missing_files  # noqa: E402
 from phacosight.phase.metrics import segments as label_segments  # noqa: E402
 from phacosight.phase.timeline import PHASES  # noqa: E402
 
@@ -49,6 +50,11 @@ class InferenceService:
         self._queue: list[str] = []
         self._stack = None
         self._log_trans = np.load(ASSETS / "transition_matrix_1fps.npy")
+        n_missing = len(missing_files())
+        if n_missing:
+            print(f"[inference] WARNING: {n_missing} model checkpoint(s) missing — "
+                  "analysis of uploads will fail until `python scripts/download_weights.py` "
+                  "is run (browsing is unaffected)")
         self._worker = threading.Thread(target=self._run, daemon=True)
         # PHACOSIGHT_NO_WORKER=1: serve browse-only (tests, CPU-only demos)
         if not os.environ.get("PHACOSIGHT_NO_WORKER"):
@@ -73,6 +79,12 @@ class InferenceService:
     def _ensure_stack(self):
         if self._stack is not None:
             return
+        missing = missing_files()
+        if missing:
+            raise RuntimeError(
+                f"{len(missing)} model checkpoint(s) not installed (e.g. {missing[0]}). "
+                "Run `python scripts/download_weights.py` from the repo root (~260 MB), "
+                "then re-submit — see README.md § Setup.")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         dino, seg, heads = load_stack(device, INFERENCE_FPS)
         if (PHASE_DIR / "videos").exists():

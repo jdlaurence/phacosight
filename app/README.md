@@ -12,6 +12,7 @@ as per-phase keyframes — on demand via `/api/overlay`, no precompute.
 ```
 git clone https://github.com/jdlaurence/phacosight.git && cd phacosight
 python -m venv .venv && .venv/bin/pip install -e ".[app]" torch torchvision transformers
+.venv/bin/python scripts/download_weights.py   # trained checkpoints (~260 MB)
 .venv/bin/python -m app          # → http://localhost:7860
 ```
 
@@ -23,9 +24,11 @@ directory (default `<repo>/data`).
 
 A bare clone (no dataset, no checkpoints) still serves the full UI and any
 timelines present. Inference additionally needs the model checkpoints under
-`runs/` (see the repo docs); the decoding grammar ships in `app/assets/` and
-the deployment stack self-checks against a labeled video whenever the labeled
-subset is present.
+`runs/` — `scripts/download_weights.py` fetches them (~260 MB, checksummed
+against `configs/weights_manifest.json`); until then, uploads fail with that
+instruction rather than crashing. The decoding grammar ships in `app/assets/`
+and the deployment stack self-checks against a labeled video whenever the
+labeled subset is present.
 
 ## Data model
 

@@ -1,0 +1,76 @@
+{
+ "base_url": "https://huggingface.co/jdlaurence/phacosight-weights/resolve/main",
+ "stack": "E7-b deployment: SegFormer-B2 fold0 (anatomy, multiclass) + 12x tools-fusion MS-TCN++ 1fps heads",
+ "files": [
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed0/fold0/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "d263270b3753d4215fae6a32457e5ac8bde132143483f2ccbd46df43ad9446ac"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed0/fold1/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "c232457a6968e521f0b6dfe22608dd5bb63cc0c8b33fedc3f72ad4adf7919705"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed0/fold2/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "8161c3d2898486b6f55fbad33e7c4276a06d18c24b8f43f879dd3ab011a59836"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed0/fold3/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "179733fbe91c47d01cfa7d5c04dfdfdf1090359a30a72c6de00fc4e1e364d372"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed1/fold0/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "6f6b8f5c2582ff45248e088d3c0c8d9dbd7fe7ce96ad81450c28bfacf7d85420"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed1/fold1/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "4ec400c565ce52e4c0901b18c38ad62644ff3b867bbaceac6485b745e984f1ab"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed1/fold2/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "fc6a31a4d91eb3a311a41f9d9fdd135ad5271867a1fdb6939305a7b1f3f6928e"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed1/fold3/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "79cd8d6e638932f947d3abe78842cff017eac7c4b5a41597eb3bd4345d8ec524"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed2/fold0/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "3fd0166ce3d334b72e8681172323d0d02c47cdc42573504e7f17656f20ee86eb"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed2/fold1/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "0fda8249059d090dd6c69d303380a622028414c0fa1cd86a59417c39a0ce6c93"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed2/fold2/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "a44364e27d2634db76b5a079bd28dc8a59c7e530412c0f53ea35485f191fcfc4"
+  },
+  {
+   "path": "runs/phase_mstcnpp_tools_1fps_aug_seed2/fold3/val_best.pt",
+   "bytes": 3928449,
+   "sha256": "4860b927cfb6b1537fcaac0a36b5c961af9c815b1d0a4d5ca7b4afbfbfc3761c"
+  },
+  {
+   "path": "runs/segformer_b2_anatomy_instrument/fold0/best.pt",
+   "bytes": 109541569,
+   "sha256": "ac760a769a565983729f9de33e0836dc816e03d2497fbe696c5bf12ceb28bdac"
+  },
+  {
+   "path": "runs/segformer_b2_instrument_multiclass/fold0/last.pt",
+   "bytes": 109548033,
+   "sha256": "7d2e435a9c5d2a2dfff8a7914c561e294635caabbac49294f660bcdf7f771bc1"
+  }
+ ]
+}
