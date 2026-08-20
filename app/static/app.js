@@ -606,19 +606,38 @@ function renderUpload() {
   const go = el("button", "", "Upload & analyze");
   const msg = el("p", "form-msg"); msg.hidden = true;
   const prog = el("div", "progress"); prog.hidden = true;
-  prog.innerHTML = `<div class="bar"><i style="width:0%"></i></div><p></p>`;
+  prog.innerHTML = `<div class="bar"><i style="width:0%"></i></div><p></p>
+    <div class="stats" hidden></div>`;
   box.append(fileF, docF, dateF, opF, go, msg, prog);
   view.append(box);
 
   const showMsg = t => { msg.hidden = false; msg.textContent = t; };
+  const bar = prog.querySelector(".bar");
+  const stats = prog.querySelector(".stats");
   const setBar = (pct, text) => {
     prog.hidden = false;
-    prog.querySelector("i").style.width = `${pct.toFixed(0)}%`;
+    bar.classList.remove("indet");
+    bar.querySelector("i").style.width = `${pct.toFixed(0)}%`;
     prog.querySelector("p").textContent = text;
   };
+  /* no meaningful percentage yet (queued, models loading): sliding bar */
+  const setIndet = text => {
+    prog.hidden = false;
+    bar.classList.add("indet");
+    prog.querySelector("p").textContent = text;
+  };
+  const fmtClock = s => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
+  const setStats = j => {
+    const items = [];
+    if (j.fps != null) items.push(`${j.fps.toFixed(0)} fps`);
+    if (j.speed != null) items.push(`${j.speed.toFixed(1)}× realtime`);
+    if (j.elapsed_s != null) items.push(`${fmtClock(j.elapsed_s)} elapsed`);
+    if (j.eta_s != null) items.push(j.eta_s >= 90
+      ? `~${Math.round(j.eta_s / 60)} min left` : `~${Math.max(5, Math.round(j.eta_s / 5) * 5)} s left`);
+    stats.hidden = !items.length;
+    stats.innerHTML = items.map(t => `<span>${esc(t)}</span>`).join("");
+  };
 
-  /* stages after the transfer itself (0-70%) */
-  const stages = {queued: 72, loading: 78, features: 86, inference: 94, done: 100};
   const pollJob = (jobId, caseId) => {
     let delay = 1500;
     const goDetail = () => {
@@ -630,7 +649,14 @@ function renderUpload() {
       try {
         const j = await api(`/api/jobs/${jobId}`);
         delay = 1500;
-        setBar(stages[j.status] ?? 72, `${j.status} — ${j.detail}`);
+        if (j.status === "features" && j.progress != null) {
+          setBar(100 * j.progress, `analyzing — ${j.detail}`);
+        } else if (["queued", "loading", "features"].includes(j.status)) {
+          setIndet(`${j.status} — ${j.detail}`);
+        } else {
+          setBar(j.status === "done" ? 100 : 99, `${j.status} — ${j.detail}`);
+        }
+        setStats(j);
         if (j.status === "done") return goDetail();
         if (j.status === "error") {
           showMsg(`Analysis failed: ${j.detail}`); go.disabled = false; return;
@@ -660,7 +686,7 @@ function renderUpload() {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/upload");
     xhr.upload.onprogress = e => {
-      if (e.lengthComputable) setBar(70 * e.loaded / e.total,
+      if (e.lengthComputable) setBar(100 * e.loaded / e.total,
         `uploading — ${(e.loaded / 1e6).toFixed(0)} / ${(e.total / 1e6).toFixed(0)} MB`);
     };
     xhr.onerror = () => { showMsg("Upload failed — network error."); go.disabled = false; };
@@ -668,7 +694,7 @@ function renderUpload() {
       if (xhr.status !== 200) {
         showMsg(`Upload failed: ${xhr.responseText}`); go.disabled = false; return;
       }
-      setBar(70, "upload complete — queued for analysis");
+      setIndet("upload complete — queued for analysis");
       const {job_id, case: caseId} = JSON.parse(xhr.responseText);
       pollJob(job_id, caseId);
     };

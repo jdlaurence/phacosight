@@ -78,7 +78,8 @@ def load_stack(device, fps=INFERENCE_FPS):
     heads = []
     for run in TOOLS_RUNS:
         for fold in range(4):
-            ckpt = torch.load(REPO / run / f"fold{fold}" / "val_best.pt", weights_only=False)
+            ckpt = torch.load(REPO / run / f"fold{fold}" / "val_best.pt",
+                              map_location=device, weights_only=False)
             cfg = ckpt["config"]
             eff_fps = cfg.get("features_fps", 5.0) / cfg.get("frame_stride", 1)
             assert eff_fps == fps, (
@@ -106,9 +107,13 @@ def self_check(dino, seg, heads, log_trans, device, fps: float) -> float:
 
 
 @torch.no_grad()
-def video_features(video: Path, dino, seg, device, fps_out: float, batch: int = 24):
+def video_features(video: Path, dino, seg, device, fps_out: float, batch: int = 24,
+                   progress=None):
+    """progress, if given, is called after each flushed batch with
+    (video_seconds_done, video_seconds_total | None, frames_read)."""
     cap = cv2.VideoCapture(str(video))
     vfps = cap.get(cv2.CAP_PROP_FPS)
+    n_total = cap.get(cv2.CAP_PROP_FRAME_COUNT)  # 0/garbage on some containers
     stride = max(1.0, vfps / fps_out)
     mean, std = MEAN.to(device), STD.to(device)
     feats, times, buf_d, buf_s = [], [], [], []
@@ -149,6 +154,8 @@ def video_features(video: Path, dino, seg, device, fps_out: float, batch: int = 
             buf_s.append(torch.from_numpy(cv2.resize(rgb, (512, 512))))
             if len(buf_d) == batch:
                 flush(); buf_d, buf_s = [], []
+                if progress is not None and vfps:
+                    progress(idx / vfps, n_total / vfps if n_total > 0 else None, idx)
         idx += 1
     if buf_d:
         flush()

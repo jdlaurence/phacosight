@@ -29,7 +29,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .config import ASSETS, PHASE_DIR, REPO, TIMELINE_DIR
+from .config import ASSETS, PHASE_DIR, REPO, TIMELINE_DIR, pick_device
 
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
@@ -40,6 +40,10 @@ from analyze_phase_bulk import (  # noqa: E402
 from download_weights import missing_files  # noqa: E402
 from phacosight.phase.metrics import segments as label_segments  # noqa: E402
 from phacosight.phase.timeline import PHASES  # noqa: E402
+
+
+def _mmss(s: float) -> str:
+    return f"{int(s) // 60}:{int(s) % 60:02d}"
 
 
 class InferenceService:
@@ -85,7 +89,7 @@ class InferenceService:
                 f"{len(missing)} model checkpoint(s) not installed (e.g. {missing[0]}). "
                 "Run `python scripts/download_weights.py` from the repo root (~260 MB), "
                 "then re-submit — see README.md § Setup.")
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = pick_device()
         dino, seg, heads = load_stack(device, INFERENCE_FPS)
         if (PHASE_DIR / "videos").exists():
             acc = self_check(dino, seg, heads, self._log_trans, device, INFERENCE_FPS)
@@ -119,8 +123,26 @@ class InferenceService:
         dino, seg, heads, device = self._stack
         video = Path(job["path"])
         job.update(status="features", detail="decoding video + extracting features")
-        x, times, duration, vfps = video_features(video, dino, seg, device, INFERENCE_FPS)
-        job.update(status="inference", detail="temporal ensemble + decoding")
+        t0 = time.time()
+
+        def on_progress(done_s, total_s, frames_read):
+            elapsed = time.time() - t0
+            if elapsed <= 0 or done_s <= 0:
+                return
+            job.update(
+                progress=round(min(done_s / total_s, 1.0), 4) if total_s else None,
+                detail=f"extracting features — {_mmss(done_s)}"
+                       + (f" / {_mmss(total_s)}" if total_s else "") + " of video",
+                fps=round(frames_read / elapsed, 1),
+                speed=round(done_s / elapsed, 2),
+                elapsed_s=round(elapsed),
+                eta_s=round((total_s - done_s) * elapsed / done_s) if total_s else None,
+            )
+
+        x, times, duration, vfps = video_features(video, dino, seg, device, INFERENCE_FPS,
+                                                  progress=on_progress)
+        job.update(status="inference", detail="temporal ensemble + decoding",
+                   progress=1.0, eta_s=None, elapsed_s=round(time.time() - t0))
         xt = x.unsqueeze(0).to(device)
         member_probs = torch.stack([torch.softmax(h(xt)[-1, 0], -1) for h in heads])
         probs = member_probs.mean(0)

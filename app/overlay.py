@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 import torch
 
-from .config import REPO
+from .config import REPO, pick_device
 
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
@@ -56,7 +56,7 @@ class OverlayService:
     def _ensure(self):
         if self._model is not None:
             return
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = pick_device()
         ckpt = torch.load(CKPT, map_location=device, weights_only=False)
         m = build_model("segformer_b2", ANATOMY_INSTRUMENT.num_classes).to(device).eval()
         m.load_state_dict(ckpt["model"])

@@ -140,7 +140,12 @@ svg.timeline rect.seg:hover { stroke: var(--ink); stroke-width: 1.2; }
 .progress .bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .progress .bar i { display: block; height: 100%; background: var(--accent);
   transition: width .4s; }
+.progress .bar.indet i { width: 38%; animation: indet 1.4s ease-in-out infinite; }
+@keyframes indet { from { margin-left: -38%; } to { margin-left: 100%; } }
 .progress p { font-size: 13px; color: var(--ink-2); }
+.progress .stats { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 2px;
+  font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.progress .stats span { white-space: nowrap; }
 
 /* ---------- error card ---------- */
 .error-card { max-width: 480px; margin: 40px auto; padding: 26px; text-align: center; }

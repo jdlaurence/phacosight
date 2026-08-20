@@ -22,3 +22,15 @@ RUNS = REPO / "runs"                       # model checkpoints
 
 TIMELINE_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def pick_device():
+    """Best available inference device: CUDA, else MPS (Apple Silicon), else CPU.
+    Torch is imported locally so importing config stays cheap."""
+    import torch
+
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
