@@ -1,5 +1,5 @@
 {
- "base_url": "https://huggingface.co/jdlaurence/phacosight-weights/resolve/main",
+ "base_url": "https://huggingface.co/jdlaurencechasen/phacosight/resolve/main",
  "stack": "E7-b deployment: SegFormer-B2 fold0 (anatomy, multiclass) + 12x tools-fusion MS-TCN++ 1fps heads",
  "files": [
   {
