@@ -5,6 +5,9 @@ Implements the pre-registered label map of ``docs/cataracts-harmonization-plan.m
 recorded in the plan doc: idle→idle (2–3.5% instrument-in-eye of 200 sampled, under
 the 10% rule), IDs 2/11 IGNORE confirmed, ID 12 amended to IGNORE, ID 18 merge to
 Tonifying/Antibiotics confirmed. Any further amendment requires a plan-doc update.
+(2026-08-19: target phase names respelled to the canonical forms in
+``phacosight.phase.timeline`` — a display-spelling change only, class IDs and
+mapping semantics untouched.)
 
 GT format: per-video CSV ``Frame,Steps`` at native video frame rate, frames
 numbered from 1, label 0 = Idle, labels 1-18 index ``STEPS``.
@@ -60,8 +63,8 @@ STEP_TO_PHASE: dict[int, str | None] = {
     11: None,                      # Preparing Implant — off-eye closeups, OOD for C1K idle
     12: None,                      # Manual Aspiration — only in the 2 vitrectomy videos; atypical cannula
     13: "Lens Implantation",
-    14: "Lens positioning",
-    15: "Viscoelastic_Suction",    # OVD Aspiration
+    14: "Lens Positioning",
+    15: "Viscoelastic Suction",    # OVD Aspiration
     16: None,                      # Suturing — no C1K equivalent
     17: None,                      # Sealing Control — no C1K equivalent
     18: "Tonifying/Antibiotics",   # Wound Hydratation — provisional merge

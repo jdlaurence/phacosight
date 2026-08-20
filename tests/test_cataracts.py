@@ -26,7 +26,7 @@ def test_lookup_table_matches_dict():
     assert STEP_TO_C1K_ID.shape == (len(STEPS),)
     assert STEP_TO_C1K_ID[0] == PHASE_ID["idle"]
     assert STEP_TO_C1K_ID[9] == IGNORE_INDEX          # Vitrectomy
-    assert STEP_TO_C1K_ID[15] == PHASE_ID["Viscoelastic_Suction"]
+    assert STEP_TO_C1K_ID[15] == PHASE_ID["Viscoelastic Suction"]
     assert STEP_TO_C1K_ID[7] == STEP_TO_C1K_ID[8] == PHASE_ID["Phacoemulsification"]
 
 

@@ -4,7 +4,7 @@
 Per PI pre-registration review (docs/reviews/, Stage 2):
 - 4 folds; per fold 36 train / 6 val / 14 test videos, video-disjoint; the four
   test folds partition all 56 videos.
-- Stratified by (Anterior_Chamber-Flushing presence x seg-set overlap x
+- Stratified by (Anterior-Chamber-Flushing presence x seg-set overlap x
   duration) so no fold is blind to the class missing from 10 videos and E3
   feature provenance doesn't cluster (B4).
 - Every val set must contain >=1 segment of all 13 classes (asserted).
@@ -32,7 +32,7 @@ N_FOLDS = 4
 N_VAL = 6
 SEED = 0
 SEG_SPLIT_DIR = Path("upstream/TrainIDs_SemanticSegmentation_FiveFold/TrainIDs_Cataract_1k_Anatomy_Instruments")
-ACF = "Anterior_Chamber Flushing"
+ACF = "Anterior Chamber Flushing"
 
 
 def seg_test_fold_map() -> dict[str, int]:

@@ -6,6 +6,13 @@ feature extraction). The label map itself stays unfrozen until the sampled-clip 
 (R2, idle rule in R1) are made and recorded here. First augmentation dataset for the
 composite corpus (see README Data section).*
 
+*2026-08-19 editorial note: the project's canonical phase spellings were cleaned up
+(`Capsule Pulishing`→`Capsule Polishing`, `Lens positioning`→`Lens Positioning`,
+`Viscoelastic_Suction`→`Viscoelastic Suction`, `Anterior_Chamber Flushing`→`Anterior
+Chamber Flushing`; see `PHASE_ALIASES` in `src/phacosight/phase/timeline.py`). Tables
+below keep the verbatim spellings they were frozen with; class IDs and mapping semantics
+are unchanged.*
+
 **Revisions from PI review (all applied):**
 - **B1:** E7-b trains on CATARACTS train+dev (30 videos); the official 20-video test split
   is held out end-to-end and carries the primary endpoint (was: train on all 50, eval on 5

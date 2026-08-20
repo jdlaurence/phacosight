@@ -2,7 +2,7 @@
 """External anchor: score the timeline model under the paper's clip protocol.
 
 The Cataract-1K paper benchmarks 3-second action-clip classification with
-Viscoelastic and Anterior_Chamber Flushing merged (shared visuals). Here each
+Viscoelastic and Anterior Chamber Flushing merged (shared visuals). Here each
 annotated action segment of each test video is cut into non-overlapping 3 s
 windows; the model's clip prediction is the majority Viterbi-decoded frame
 label in the window (idle counts as an error — harsher than a clip classifier
@@ -28,7 +28,7 @@ from phacosight.phase.decoding import transition_matrix, viterbi
 from phacosight.phase.timeline import NUM_CLASSES, PHASE_ID, PHASES, case_paths, load_segments
 from eval_phase import fold_logits
 
-MERGE = {PHASE_ID["Anterior_Chamber Flushing"]: PHASE_ID["Viscoelastic"]}
+MERGE = {PHASE_ID["Anterior Chamber Flushing"]: PHASE_ID["Viscoelastic"]}
 
 
 def main() -> None:

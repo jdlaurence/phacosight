@@ -7,11 +7,18 @@ const PHASE_COLORS = {
   idle: "#d9d7d0", "Incision": "#2a78d6", "Viscoelastic": "#86b6ef",
   "Capsulorhexis": "#1baf7a", "Hydrodissection": "#7fd6b3",
   "Phacoemulsification": "#eb6834", "Irrigation/Aspiration": "#f3a97e",
-  "Capsule Pulishing": "#eda100", "Lens Implantation": "#4a3aa7",
-  "Lens positioning": "#9085e9", "Viscoelastic_Suction": "#e87ba4",
-  "Anterior_Chamber Flushing": "#c2569b", "Tonifying/Antibiotics": "#008300",
+  "Capsule Polishing": "#eda100", "Lens Implantation": "#4a3aa7",
+  "Lens Positioning": "#9085e9", "Viscoelastic Suction": "#e87ba4",
+  "Anterior Chamber Flushing": "#c2569b", "Tonifying/Antibiotics": "#008300",
 };
-const nice = p => p === "Capsule Pulishing" ? "Capsule Polishing" : p.replaceAll("_", " ");
+// The API serves canonical names; nice() only papers over pre-cleanup
+// spellings that can still arrive from old bookmarked #/phases/ routes.
+const LEGACY_PHASES = {
+  "Capsule Pulishing": "Capsule Polishing", "Lens positioning": "Lens Positioning",
+  "Viscoelastic_Suction": "Viscoelastic Suction",
+  "Anterior_Chamber Flushing": "Anterior Chamber Flushing",
+};
+const nice = p => LEGACY_PHASES[p] ?? p;
 const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g,
   c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -497,6 +504,7 @@ function timelineSVG(segs, total, vid, isModel) {
 /* ---------------- phase explorer ---------------- */
 async function renderPhases(phase) {
   const phases = Object.keys(PHASE_COLORS).filter(p => p !== "idle");
+  if (phase) phase = nice(phase);  // canonicalize pre-cleanup bookmarks
   if (!phase || !phases.includes(phase)) phase = "Incision";
   view.innerHTML = "";
   view.append(el("h1", "", "Phase explorer"));

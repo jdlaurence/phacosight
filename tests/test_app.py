@@ -216,3 +216,27 @@ def test_overlay_model_integration():
     assert cropped.shape == (768, 1024, 3)         # 16:9 → 4:3 center crop
     assert mask.shape == cropped.shape[:2]
     assert mask.max() <= 4
+
+
+def test_legacy_phase_spellings_served_canonical(app_env):
+    """Timelines written before the 2026-08-19 phase-name cleanup stored the
+    dataset's verbatim spellings; the API must serve canonical names and
+    accept legacy names in query params."""
+    client, _, tldir = app_env
+    p = tldir / "case_legacy.json"
+    p.write_text(json.dumps(timeline("case_legacy", [
+        seg("Viscoelastic_Suction", 0, 10), seg("Capsule Pulishing", 10, 25),
+        seg("Anterior_Chamber Flushing", 25, 30), seg("Lens positioning", 30, 40)],
+        source="library")))
+    try:
+        d = client.get("/api/videos/case_legacy").json()
+        assert [s["phase"] for s in d["segments"]] == [
+            "Viscoelastic Suction", "Capsule Polishing",
+            "Anterior Chamber Flushing", "Lens Positioning"]
+        for q in ("Capsule Polishing", "Capsule Pulishing"):  # canonical + legacy query
+            hits = client.get("/api/search",
+                              params={"phase": q, "min_conf": 0.1}).json()["hits"]
+            assert [h["case"] for h in hits] == ["case_legacy"]
+            assert hits[0]["phase"] == "Capsule Polishing"
+    finally:
+        p.unlink()

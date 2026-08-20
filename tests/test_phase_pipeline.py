@@ -7,7 +7,9 @@ import torch
 
 from phacosight.phase.heads import HEADS, mstcn_loss
 from phacosight.phase.metrics import PhaseMetrics, edit_score, f1_at_k, segments
-from phacosight.phase.timeline import NUM_CLASSES, PHASE_ID, frame_labels, load_segments
+from phacosight.phase.timeline import (
+    NUM_CLASSES, PHASE_ALIASES, PHASE_ID, PHASES, canonical_phase, frame_labels, load_segments,
+)
 
 
 def test_frame_labels_rasterization(tmp_path):
@@ -24,6 +26,22 @@ def test_frame_labels_rasterization(tmp_path):
     assert labels[4] == 0  # gap idle
     assert set(labels[8:12]) == {PHASE_ID["Capsulorhexis"]}
     assert labels[-1] == 0  # post-surgery idle
+
+
+def test_load_segments_accepts_dataset_csv_spellings(tmp_path):
+    # the Cataract-1K CSVs use pre-cleanup spellings; every alias must resolve
+    # to a canonical class, and canonical names must pass through untouched
+    assert all(v in PHASES and k not in PHASES for k, v in PHASE_ALIASES.items())
+    assert canonical_phase("Capsule Pulishing") == "Capsule Polishing"
+    assert canonical_phase("Capsule Polishing") == "Capsule Polishing"
+    csv = tmp_path / "legacy.csv"
+    pd.DataFrame(
+        {"comment": ["Viscoelastic_Suction", "Anterior_Chamber Flushing", "Lens positioning"],
+         "sec": [0.0, 2.0, 4.0], "endSec": [1.0, 3.0, 5.0]}
+    ).to_csv(csv, index=False)
+    assert load_segments(csv)["phase_id"].tolist() == [
+        PHASE_ID["Viscoelastic Suction"], PHASE_ID["Anterior Chamber Flushing"],
+        PHASE_ID["Lens Positioning"]]
 
 
 def test_load_segments_rejects_unknown_phase(tmp_path):

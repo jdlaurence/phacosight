@@ -22,7 +22,7 @@ import numpy as np
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from phacosight.phase.timeline import PHASES, case_paths, load_segments, phase_cases
+from phacosight.phase.timeline import PHASES, canonical_phase, case_paths, load_segments, phase_cases
 
 ANCHORS = {"Incision", "Capsulorhexis", "Phacoemulsification", "Lens Implantation"}
 PCTS = (10, 25, 50, 75, 90)
@@ -49,6 +49,8 @@ def main() -> None:
         d = json.loads(f.read_text())
         if d.get("source") == "uploaded":  # physician uploads never enter norms
             continue
+        for s in d["segments"]:  # pre-cleanup timelines stored legacy spellings
+            s["phase"] = canonical_phase(s["phase"])
         segs = [s for s in d["segments"] if s["phase"] != "idle"]
         # video-level gate: all four anchors present in the raw prediction
         if not ANCHORS <= {s["phase"] for s in segs}:

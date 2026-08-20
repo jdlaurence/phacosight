@@ -27,7 +27,9 @@ from .inference import InferenceService
 from .overlay import OVERLAY_COLORS, OverlayService, render_overlay
 
 sys.path.insert(0, str(REPO / "src"))
-from phacosight.phase.timeline import PHASES, case_paths, load_segments, phase_cases  # noqa: E402
+from phacosight.phase.timeline import (  # noqa: E402
+    PHASES, canonical_phase, case_paths, load_segments, phase_cases,
+)
 
 CLIP_CACHE = Path(tempfile.gettempdir()) / "phacosight_clips"
 CLIP_CACHE_MAX_BYTES = 2 * 2**30
@@ -55,6 +57,16 @@ def video_path(case: str) -> Path:
     raise HTTPException(404, f"no video file for {case}")
 
 
+def _canonical_timeline(d: dict) -> dict:
+    """Timelines written before the 2026-08-19 phase-name cleanup stored the
+    dataset's legacy spellings; normalize once at load."""
+    if isinstance(d.get("segments"), list):
+        for s in d["segments"]:
+            if isinstance(s, dict) and "phase" in s:
+                s["phase"] = canonical_phase(s["phase"])
+    return d
+
+
 class TimelineCache:
     """Mtime-keyed cache of TIMELINE_DIR — list endpoints and norms would
     otherwise re-parse every timeline JSON per request, and one malformed
@@ -77,7 +89,7 @@ class TimelineCache:
                 if hit and hit[0] == mtime:
                     continue
                 try:
-                    d = json.loads(f.read_text())
+                    d = _canonical_timeline(json.loads(f.read_text()))
                     missing = self.REQUIRED - d.keys()
                     if missing:
                         raise ValueError(f"missing keys {sorted(missing)}")
@@ -103,7 +115,7 @@ def load_timeline(case: str) -> dict:
     if not p.exists():
         raise HTTPException(404, f"{case} not analyzed")
     try:
-        return json.loads(p.read_text())
+        return _canonical_timeline(json.loads(p.read_text()))
     except ValueError:
         raise HTTPException(500, f"timeline for {case} is malformed")
 
@@ -278,6 +290,7 @@ def get_video(case: str):
 
 @app.get("/api/phase_stats")
 def phase_stats(phase: str):
+    phase = canonical_phase(phase)  # accept legacy spellings in old links
     dist = norms.dist.get(phase, [])
     if not dist:
         raise HTTPException(404, f"no cohort data for {phase}")
@@ -390,6 +403,7 @@ def overlay(case: str, t: float, h: int = 480):
 
 @app.get("/api/search")
 def search(phase: str, min_conf: float = 0.9, limit: int = 60):
+    phase = canonical_phase(phase)  # accept legacy spellings in old links
     hits = []
     for d in timelines.all():
         for s in d["segments"]:

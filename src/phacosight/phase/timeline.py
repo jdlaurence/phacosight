@@ -11,8 +11,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# index == class ID; canonical surgical order, idle first. Names verbatim from
-# the CSVs (including the dataset's own spellings).
+# index == class ID; canonical surgical order, idle first. Names are the
+# project's cleaned-up spellings; the dataset CSVs' verbatim names (and any
+# artifact written before the 2026-08-19 cleanup) map in via PHASE_ALIASES.
 PHASES = (
     "idle",
     "Incision",
@@ -21,26 +22,42 @@ PHASES = (
     "Hydrodissection",
     "Phacoemulsification",
     "Irrigation/Aspiration",
-    "Capsule Pulishing",
+    "Capsule Polishing",
     "Lens Implantation",
-    "Lens positioning",
-    "Viscoelastic_Suction",
-    "Anterior_Chamber Flushing",
+    "Lens Positioning",
+    "Viscoelastic Suction",
+    "Anterior Chamber Flushing",
     "Tonifying/Antibiotics",
 )
 PHASE_ID = {name: i for i, name in enumerate(PHASES)}
 NUM_CLASSES = len(PHASES)
 
+# Legacy name -> canonical. Keys are the Cataract-1K CSVs' verbatim spellings
+# (typo, underscores, casing), which are also what pre-cleanup timeline/norms
+# artifacts stored. Class IDs and order are unchanged by the rename.
+PHASE_ALIASES = {
+    "Capsule Pulishing": "Capsule Polishing",
+    "Lens positioning": "Lens Positioning",
+    "Viscoelastic_Suction": "Viscoelastic Suction",
+    "Anterior_Chamber Flushing": "Anterior Chamber Flushing",
+}
+
+
+def canonical_phase(name: str) -> str:
+    """Map a dataset-CSV or legacy-artifact phase name to its canonical form."""
+    return PHASE_ALIASES.get(name, name)
+
 
 def load_segments(annotation_csv: Path | str) -> pd.DataFrame:
     """Rows of (phase_id, start_sec, end_sec), sorted, validated."""
     df = pd.read_csv(annotation_csv)
-    unknown = set(df["comment"]) - set(PHASES)
+    names = df["comment"].map(canonical_phase)
+    unknown = set(names) - set(PHASES)
     if unknown:
         raise ValueError(f"{annotation_csv}: unknown phase names {sorted(unknown)}")
     out = pd.DataFrame(
         {
-            "phase_id": df["comment"].map(PHASE_ID),
+            "phase_id": names.map(PHASE_ID),
             "start_sec": df["sec"].astype(float),
             "end_sec": df["endSec"].astype(float),
         }
